@@ -15,7 +15,7 @@ beautifulsoup4==4.12.3
 twilio==9.10.2
 
 # Data handling
-pandas==2.0.3
+pandas==2.2.3
 
 # Environment variables
 python-dotenv==1.0.1
