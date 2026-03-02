@@ -1,0 +1,21 @@
+# FastAPI framework
+fastapi==0.115.6
+uvicorn[standard]==0.33.0
+pydantic==2.10.6
+pydantic-settings==2.7.1
+
+# Anthropic SDK
+anthropic==0.42.0
+
+# HTTP client y scraping
+httpx==0.28.1
+beautifulsoup4==4.12.3
+
+# Twilio WhatsApp
+twilio==9.10.2
+
+# Data handling
+pandas==2.0.3
+
+# Environment variables
+python-dotenv==1.0.1
