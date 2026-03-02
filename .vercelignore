@@ -1,0 +1,13 @@
+# Ignorar backend en Vercel (se deploya en Render)
+backend/
+
+# Ignorar archivos de configuración
+render.yaml
+.python-version
+requirements.txt
+*.md
+!README.md
+
+# Ignorar archivos de git
+.git/
+.gitignore
