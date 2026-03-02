@@ -540,10 +540,14 @@
     </div>
 
     <script>
+        // Configuración del backend
+        const BACKEND_URL = 'https://chatbot-comodoro-backend.onrender.com'; // Cambiar por tu URL de Render
+
         // Estado del chatbot
         const chatbotState = {
             isOpen: false,
-            welcomeBubbleShown: false
+            welcomeBubbleShown: false,
+            conversationHistory: []
         };
 
         // Referencias al DOM
@@ -604,7 +608,7 @@
         });
 
         // Función para enviar mensaje
-        function sendMessage() {
+        async function sendMessage() {
             const message = chatInput.value.trim();
             if (message === '') return;
 
@@ -612,10 +616,77 @@
             addMessage(message, 'user');
             chatInput.value = '';
 
-            // Simular respuesta del bot (placeholder)
-            setTimeout(() => {
-                addMessage('Gracias por tu consulta. En breve conectaremos con nuestro sistema de IA para darte una respuesta completa.', 'bot');
-            }, 500);
+            // Agregar al historial de conversación
+            chatbotState.conversationHistory.push({
+                role: 'user',
+                content: message
+            });
+
+            // Deshabilitar input mientras se procesa
+            chatInput.disabled = true;
+            chatSend.disabled = true;
+
+            // Mostrar indicador de escritura
+            const typingIndicator = addTypingIndicator();
+
+            try {
+                // Llamar al backend
+                const response = await fetch(`${BACKEND_URL}/chat/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        messages: chatbotState.conversationHistory
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Remover indicador de escritura
+                typingIndicator.remove();
+
+                // Agregar respuesta del bot
+                addMessage(data.content, 'bot');
+
+                // Agregar al historial
+                chatbotState.conversationHistory.push({
+                    role: 'assistant',
+                    content: data.content
+                });
+
+            } catch (error) {
+                console.error('Error al enviar mensaje:', error);
+                typingIndicator.remove();
+                addMessage('Disculpá, hubo un error al conectar con el servidor. Por favor, intentá nuevamente.', 'bot');
+            } finally {
+                // Re-habilitar input
+                chatInput.disabled = false;
+                chatSend.disabled = false;
+                chatInput.focus();
+            }
+        }
+
+        // Función para agregar indicador de escritura
+        function addTypingIndicator() {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', 'bot', 'typing-indicator');
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('message-bubble');
+            bubbleDiv.textContent = '...';
+
+            messageDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(messageDiv);
+
+            // Scroll al último mensaje
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            return messageDiv;
         }
 
         // Función para agregar mensajes al chat
@@ -656,10 +727,9 @@
                 }
 
                 if (message) {
-                    addMessage(message, 'user');
-                    setTimeout(() => {
-                        addMessage(`Estoy procesando tu consulta sobre "${action}". En breve tendrás una respuesta detallada.`, 'bot');
-                    }, 500);
+                    // Simular que el usuario escribió el mensaje
+                    chatInput.value = message;
+                    sendMessage();
                 }
             });
         });
