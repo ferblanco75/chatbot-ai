@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente de Compras · Municipalidad de Comodoro Rivadavia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Reset y variables globales */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --azul-marino: #0B2347;
+            --azul: #1055A8;
+            --dorado: #E8A000;
+            --blanco: #FFFFFF;
+            --gris-claro: #F5F5F5;
+            --gris-medio: #E0E0E0;
+            --gris-texto: #666666;
+            --sombra: rgba(11, 35, 71, 0.15);
+            --sombra-fuerte: rgba(11, 35, 71, 0.25);
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--gris-claro);
+            color: var(--azul-marino);
+            line-height: 1.6;
+        }
+
+        /* Contenido principal de la página simulada */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--azul-marino) 0%, var(--azul) 100%);
+            color: var(--blanco);
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .section {
+            background: var(--blanco);
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px var(--sombra);
+        }
+
+        .section h2 {
+            color: var(--azul);
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .section p {
+            color: var(--gris-texto);
+            font-size: 1rem;
+            line-height: 1.8;
+        }
+
+        /* Widget Chatbot - FAB (Floating Action Button) */
+        #chatbot-fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--azul) 0%, var(--azul-marino) 100%);
+            border-radius: 50%;
+            box-shadow: 0 4px 16px var(--sombra-fuerte);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), box-shadow 0.3s ease;
+        }
+
+        #chatbot-fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px var(--sombra-fuerte);
+        }
+
+        #chatbot-fab.open {
+            transform: scale(0.9);
+        }
+
+        #chatbot-fab .fab-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--blanco);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--azul);
+        }
+
+        /* Burbuja de bienvenida */
+        #welcome-bubble {
+            position: fixed;
+            bottom: 100px;
+            right: 24px;
+            background: var(--blanco);
+            padding: 16px 20px;
+            border-radius: 16px 16px 4px 16px;
+            box-shadow: 0 4px 16px var(--sombra-fuerte);
+            max-width: 280px;
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        #welcome-bubble.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        #welcome-bubble .bubble-text {
+            color: var(--azul-marino);
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        #welcome-bubble .bubble-subtext {
+            color: var(--gris-texto);
+            font-size: 0.85rem;
+            font-weight: 400;
+        }
+
+        #welcome-bubble .close-bubble {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: var(--gris-texto);
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 4px;
+        }
+
+        /* Panel del chat */
+        #chatbot-panel {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 400px;
+            height: 600px;
+            background: var(--blanco);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px var(--sombra-fuerte);
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        #chatbot-panel.open {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: all;
+        }
+
+        /* Header del panel */
+        .chat-header {
+            background: linear-gradient(135deg, var(--azul-marino) 0%, var(--azul) 100%);
+            color: var(--blanco);
+            padding: 20px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--dorado);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--azul-marino);
+        }
+
+        .chat-title h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .chat-title p {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .chat-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: var(--blanco);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: background 0.2s ease;
+        }
+
+        .chat-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Área de mensajes */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--gris-claro);
+        }
+
+        .message {
+            margin-bottom: 16px;
+            animation: messageSlideIn 0.3s ease;
+        }
+
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.bot .message-bubble {
+            background: var(--blanco);
+            color: var(--azul-marino);
+            border-radius: 16px 16px 16px 4px;
+            padding: 12px 16px;
+            display: inline-block;
+            max-width: 80%;
+            box-shadow: 0 2px 8px var(--sombra);
+        }
+
+        .message.user .message-bubble {
+            background: var(--azul);
+            color: var(--blanco);
+            border-radius: 16px 16px 4px 16px;
+            padding: 12px 16px;
+            display: inline-block;
+            max-width: 80%;
+            margin-left: auto;
+            float: right;
+        }
+
+        .message-bubble {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        /* Chips de respuestas rápidas */
+        .quick-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .chip {
+            background: var(--blanco);
+            border: 2px solid var(--azul);
+            color: var(--azul);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chip:hover {
+            background: var(--azul);
+            color: var(--blanco);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--sombra);
+        }
+
+        /* Área de input */
+        .chat-input-area {
+            padding: 16px 20px;
+            background: var(--blanco);
+            border-top: 1px solid var(--gris-medio);
+            border-radius: 0 0 16px 16px;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            border: 2px solid var(--gris-medio);
+            border-radius: 24px;
+            padding: 12px 16px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .chat-input:focus {
+            border-color: var(--azul);
+        }
+
+        .chat-send {
+            background: var(--azul);
+            border: none;
+            color: var(--blanco);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .chat-send:hover {
+            background: var(--azul-marino);
+            transform: scale(1.05);
+        }
+
+        .chat-send:disabled {
+            background: var(--gris-medio);
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #chatbot-panel {
+                width: calc(100vw - 32px);
+                height: calc(100vh - 32px);
+                bottom: 16px;
+                right: 16px;
+            }
+
+            #chatbot-fab {
+                bottom: 16px;
+                right: 16px;
+            }
+
+            #welcome-bubble {
+                bottom: 92px;
+                right: 16px;
+                max-width: calc(100vw - 120px);
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chip {
+                font-size: 0.8rem;
+                padding: 6px 12px;
+            }
+
+            .message-bubble {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 320px) {
+            #chatbot-fab {
+                width: 56px;
+                height: 56px;
+            }
+
+            #chatbot-fab .fab-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Contenido principal simulado de la web municipal -->
+    <div class="main-content">
+        <div class="header">
+            <h1>Municipalidad de Comodoro Rivadavia</h1>
+            <p>Licitaciones y Compras Públicas</p>
+        </div>
+
+        <div class="section">
+            <h2>Bienvenido al Portal de Compras</h2>
+            <p>
+                Este portal te permite acceder a toda la información sobre licitaciones públicas,
+                inscripción en el padrón de proveedores, consultar ofertas vigentes y conocer
+                la normativa local (Ley II N°76 - Contrataciones Provinciales, Ley N°4829 - Compre Chubut).
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>Información de Contacto</h2>
+            <p>
+                <strong>Email:</strong> licitacionesyconcursos@comodoro.gov.ar<br>
+                <strong>Dirección:</strong> Namuncurá 26, Comodoro Rivadavia, Chubut<br>
+                <strong>Horario:</strong> Lunes a Viernes de 8:00 a 14:00 hs
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>Últimas Licitaciones</h2>
+            <p>
+                Consultá las licitaciones públicas vigentes, conocé los pliegos de bases y condiciones,
+                y accedé a toda la documentación necesaria para participar en los procesos de compras
+                de la Municipalidad de Comodoro Rivadavia.
+            </p>
+        </div>
+    </div>
+
+    <!-- Widget Chatbot -->
+    <!-- Burbuja de bienvenida -->
+    <div id="welcome-bubble">
+        <button class="close-bubble" aria-label="Cerrar burbuja">&times;</button>
+        <div class="bubble-text">¡Hola! Soy el asistente de compras</div>
+        <div class="bubble-subtext">¿En qué puedo ayudarte hoy?</div>
+    </div>
+
+    <!-- FAB - Floating Action Button -->
+    <div id="chatbot-fab" aria-label="Abrir asistente de compras">
+        <div class="fab-icon">AC</div>
+    </div>
+
+    <!-- Panel del Chat -->
+    <div id="chatbot-panel">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <div class="chat-avatar">AC</div>
+                <div class="chat-title">
+                    <h3>Asistente de Compras</h3>
+                    <p>Municipalidad de Comodoro</p>
+                </div>
+            </div>
+            <button class="chat-close" aria-label="Cerrar chat">&times;</button>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot">
+                <div class="message-bubble">
+                    ¡Hola! Soy el Asistente de Compras de la Municipalidad de Comodoro Rivadavia.
+                    Puedo ayudarte con información sobre licitaciones, inscripción de proveedores,
+                    ofertas vigentes y normativa local.
+                </div>
+                <div class="quick-chips">
+                    <button class="chip" data-action="inscripcion">Inscripción</button>
+                    <button class="chip" data-action="licitaciones">Licitaciones</button>
+                    <button class="chip" data-action="ofertas">Ofertas</button>
+                    <button class="chip" data-action="ley-local">Ley local</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+                <input
+                    type="text"
+                    class="chat-input"
+                    id="chat-input"
+                    placeholder="Escribí tu consulta..."
+                    aria-label="Mensaje"
+                >
+                <button class="chat-send" id="chat-send" aria-label="Enviar mensaje">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado del chatbot
+        const chatbotState = {
+            isOpen: false,
+            welcomeBubbleShown: false
+        };
+
+        // Referencias al DOM
+        const fab = document.getElementById('chatbot-fab');
+        const panel = document.getElementById('chatbot-panel');
+        const welcomeBubble = document.getElementById('welcome-bubble');
+        const closeBubbleBtn = welcomeBubble.querySelector('.close-bubble');
+        const closeBtn = panel.querySelector('.chat-close');
+        const chatInput = document.getElementById('chat-input');
+        const chatSend = document.getElementById('chat-send');
+        const chatMessages = document.getElementById('chat-messages');
+        const chips = document.querySelectorAll('.chip');
+
+        // Mostrar burbuja de bienvenida después de 3 segundos
+        setTimeout(() => {
+            if (!chatbotState.isOpen && !chatbotState.welcomeBubbleShown) {
+                welcomeBubble.classList.add('show');
+                chatbotState.welcomeBubbleShown = true;
+            }
+        }, 3000);
+
+        // Cerrar burbuja de bienvenida
+        closeBubbleBtn.addEventListener('click', () => {
+            welcomeBubble.classList.remove('show');
+        });
+
+        // Abrir/cerrar panel con FAB
+        fab.addEventListener('click', () => {
+            togglePanel();
+        });
+
+        // Cerrar panel con botón X
+        closeBtn.addEventListener('click', () => {
+            togglePanel();
+        });
+
+        // Función para toggle del panel
+        function togglePanel() {
+            chatbotState.isOpen = !chatbotState.isOpen;
+
+            if (chatbotState.isOpen) {
+                panel.classList.add('open');
+                fab.classList.add('open');
+                welcomeBubble.classList.remove('show');
+                chatInput.focus();
+            } else {
+                panel.classList.remove('open');
+                fab.classList.remove('open');
+            }
+        }
+
+        // Manejar envío de mensajes
+        chatSend.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Función para enviar mensaje
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message === '') return;
+
+            // Agregar mensaje del usuario
+            addMessage(message, 'user');
+            chatInput.value = '';
+
+            // Simular respuesta del bot (placeholder)
+            setTimeout(() => {
+                addMessage('Gracias por tu consulta. En breve conectaremos con nuestro sistema de IA para darte una respuesta completa.', 'bot');
+            }, 500);
+        }
+
+        // Función para agregar mensajes al chat
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('message-bubble');
+            bubbleDiv.textContent = text;
+
+            messageDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(messageDiv);
+
+            // Scroll al último mensaje
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Manejar clicks en chips
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const action = chip.dataset.action;
+                let message = '';
+
+                switch(action) {
+                    case 'inscripcion':
+                        message = '¿Cómo me inscribo en el padrón de proveedores?';
+                        break;
+                    case 'licitaciones':
+                        message = '¿Qué licitaciones están abiertas actualmente?';
+                        break;
+                    case 'ofertas':
+                        message = 'Quiero consultar las ofertas vigentes';
+                        break;
+                    case 'ley-local':
+                        message = '¿Cuál es la normativa local de contrataciones?';
+                        break;
+                }
+
+                if (message) {
+                    addMessage(message, 'user');
+                    setTimeout(() => {
+                        addMessage(`Estoy procesando tu consulta sobre "${action}". En breve tendrás una respuesta detallada.`, 'bot');
+                    }, 500);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
