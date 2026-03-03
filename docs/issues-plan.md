@@ -49,16 +49,23 @@ Este documento define el roadmap completo del proyecto, desde el MVP hasta la ve
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  FASE 3: Features de Administración                          │
-│  Timeline: 3 semanas                                         │
-│  Issues: #009 - #012                                         │
+│  FASE 3: Features de Administración y Automatización         │
+│  Timeline: 4.5 semanas                                       │
+│  Issues: #009 - #011                                         │
 └──────────────────────────────────────────────────────────────┘
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  FASE 4: Escalamiento y Optimización                         │
+│  FASE 4: UX y Optimización                                   │
 │  Timeline: 4 semanas                                         │
-│  Issues: #013 - #017                                         │
+│  Issues: #012 - #014                                         │
+└──────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────┐
+│  FASE 5: Features Avanzadas (Post v1.0)                      │
+│  Timeline: Por determinar                                    │
+│  Issues: #015 - #018                                         │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -355,11 +362,55 @@ pytest backend/tests/ --cov=backend --cov-report=html
 
 ---
 
-### 🟡 Issue #010: Notificaciones WhatsApp automáticas
+### 🟡 Issue #010: Mejoras y automatización del scraper
+
+**Prioridad**: MEDIA
+**Estimación**: 1 semana
+**Dependencias**: #006
+
+**Descripción**: Mejorar el scraper de licitaciones con automatización y extracción de datos más completa.
+
+**Tareas**:
+- [ ] Configurar cron job para scraping automático diario
+  - [ ] Configurar schedule en Railway/Render (ej: 6:00 AM diario)
+  - [ ] Implementar endpoint `/scraper/run` para trigger manual
+  - [ ] Logging de ejecuciones (timestamp, licitaciones nuevas, errores)
+- [ ] Mejorar el scraper para extraer más detalles
+  - [ ] Entrar a cada URL individual de licitación
+  - [ ] Extraer descripción completa (no solo título)
+  - [ ] Extraer adjuntos/pliegos disponibles
+  - [ ] Extraer contacto responsable
+  - [ ] Extraer presupuesto estimado
+- [ ] Agregar filtros por rubro/categoría
+  - [ ] Detectar rubro automáticamente desde título/descripción
+  - [ ] Categorizar licitaciones (construcción, servicios, tecnología, etc.)
+  - [ ] Agregar campo `categoria` y `rubro` al JSON de licitaciones
+  - [ ] Endpoint GET `/licitaciones?rubro=limpieza&categoria=servicios`
+
+**Archivos a modificar**:
+- `backend/services/scraper.py` (mejoras de parsing)
+- `backend/routers/licitaciones.py` (agregar filtros)
+- `backend/data/licitaciones.json` (nuevos campos)
+
+**Configuración de cron** (Railway/Render):
+```bash
+# Ejecutar scraper diariamente a las 6 AM (UTC)
+0 6 * * * curl -X POST https://chatbot-backend.railway.app/scraper/run
+```
+
+**Criterios de aceptación**:
+- [ ] Scraper corre automáticamente 1 vez por día
+- [ ] Extrae al menos 5 campos adicionales por licitación
+- [ ] Endpoint `/licitaciones` soporta filtros por rubro/categoría
+- [ ] Logs de scraper visibles en Railway/Render dashboard
+
+---
+
+### 🟡 Issue #011: Notificaciones WhatsApp automáticas
 
 **Prioridad**: MEDIA
 **Estimación**: 1.5 semanas
-**Dependencias**: #009
+**Dependencias**: #010
 
 **Descripción**: Sistema de suscripciones para recibir alertas de nuevas licitaciones.
 
@@ -387,12 +438,12 @@ pytest backend/tests/ --cov=backend --cov-report=html
 - `backend/database.py` (conexión a PostgreSQL)
 
 **Consideraciones**:
-- Migrar de JSON files a PostgreSQL (issue #015)
+- Migrar de JSON files a PostgreSQL (issue #016)
 - Twilio WhatsApp Business API (requiere aprobación de Meta)
 
 ---
 
-### 🟢 Issue #011: Mejoras de UX en el widget
+### 🟢 Issue #012: Mejoras de UX en el widget
 
 **Prioridad**: BAJA
 **Estimación**: 1 semana
@@ -419,11 +470,11 @@ pytest backend/tests/ --cov=backend --cov-report=html
 
 ---
 
-### 🟢 Issue #012: Soporte multiidioma
+### 🟢 Issue #013: Soporte multiidioma
 
 **Prioridad**: BAJA
 **Estimación**: 2 semanas
-**Dependencias**: #011
+**Dependencias**: #012
 
 **Descripción**: Widget en español e inglés.
 
@@ -458,7 +509,7 @@ pytest backend/tests/ --cov=backend --cov-report=html
 
 ---
 
-### 🟢 Issue #013: Caché de respuestas frecuentes
+### 🟢 Issue #014: Caché de respuestas frecuentes
 
 **Prioridad**: BAJA
 **Estimación**: 1 semana
@@ -489,11 +540,11 @@ pytest backend/tests/ --cov=backend --cov-report=html
 
 ---
 
-### 🔵 Issue #014: Integración con Google Calendar
+### 🔵 Issue #015: Integración con Google Calendar
 
 **Prioridad**: NICE-TO-HAVE
 **Estimación**: 2 semanas
-**Dependencias**: #010
+**Dependencias**: #011
 
 **Descripción**: Permitir a proveedores agregar fechas de apertura de licitaciones a Google Calendar.
 
@@ -519,11 +570,11 @@ https://calendar.google.com/calendar/render?action=TEMPLATE
 
 ---
 
-### 🔵 Issue #015: Migración a PostgreSQL
+### 🔵 Issue #016: Migración a PostgreSQL
 
 **Prioridad**: NICE-TO-HAVE
 **Estimación**: 2 semanas
-**Dependencias**: #010
+**Dependencias**: #011
 
 **Descripción**: Reemplazar archivos JSON/CSV por base de datos relacional.
 
@@ -589,11 +640,11 @@ CREATE TABLE conversaciones (
 
 ---
 
-### 🔵 Issue #016: Dashboard público de licitaciones
+### 🔵 Issue #017: Dashboard público de licitaciones
 
 **Prioridad**: NICE-TO-HAVE
 **Estimación**: 3 semanas
-**Dependencias**: #015
+**Dependencias**: #016
 
 **Descripción**: Sitio web público (fuera del chatbot) con tabla de licitaciones.
 
@@ -616,11 +667,11 @@ CREATE TABLE conversaciones (
 
 ---
 
-### 🔵 Issue #017: Análisis de sentimiento y temas
+### 🔵 Issue #018: Análisis de sentimiento y temas
 
 **Prioridad**: NICE-TO-HAVE
 **Estimación**: 2 semanas
-**Dependencias**: #008, #015
+**Dependencias**: #008, #016
 
 **Descripción**: Análisis automático de las consultas para mejorar el servicio.
 
@@ -665,13 +716,13 @@ CREATE TABLE conversaciones (
 
 **Ideas para versiones futuras**:
 
-1. **Issue #018**: Integración con sistema de compras municipal (ERP)
-2. **Issue #019**: Chatbot por voz (Speech-to-Text + Text-to-Speech)
-3. **Issue #020**: Widget embebible para otros municipios (white-label)
-4. **Issue #021**: Asistente para armado de ofertas (ayuda a proveedores a completar formularios)
-5. **Issue #022**: Blockchain para trazabilidad de licitaciones
-6. **Issue #023**: Gamificación (badges para proveedores activos)
-7. **Issue #024**: Extensión de Chrome (widget en cualquier sitio)
+1. **Issue #019**: Integración con sistema de compras municipal (ERP)
+2. **Issue #020**: Chatbot por voz (Speech-to-Text + Text-to-Speech)
+3. **Issue #021**: Widget embebible para otros municipios (white-label)
+4. **Issue #022**: Asistente para armado de ofertas (ayuda a proveedores a completar formularios)
+5. **Issue #023**: Blockchain para trazabilidad de licitaciones
+6. **Issue #024**: Gamificación (badges para proveedores activos)
+7. **Issue #025**: Extensión de Chrome (widget en cualquier sitio)
 
 ---
 
@@ -691,14 +742,14 @@ CREATE TABLE conversaciones (
 ```
      │ Alto Impacto │ Bajo Impacto
 ─────┼──────────────┼──────────────
-Alta │   #006 🔴   │   #012 🟢
-Comp │   #007 🔴   │   #014 🔵
-lejid│   #010 🟡   │   #017 🔵
-ad   │              │
+Alta │   #006 🔴   │   #013 🟢
+Comp │   #007 🔴   │   #015 🔵
+lejid│   #010 🟡   │   #018 🔵
+ad   │   #011 🟡   │
 ─────┼──────────────┼──────────────
-Baja │   #008 🟡   │   #011 🟢
-Comp │   #009 🟡   │   #013 🟢
-lejid│   #015 🔵   │   #016 🔵
+Baja │   #008 🟡   │   #012 🟢
+Comp │   #009 🟡   │   #014 🟢
+lejid│   #016 🔵   │   #017 🔵
 ad   │              │
 ```
 
@@ -718,16 +769,17 @@ ad   │              │
 | #007 | 1.5 semanas | 7 días | Sprint 2 |
 | #008 | 1 semana | 5 días | Sprint 3 |
 | #009 | 2 semanas | 10 días | Sprint 4-5 |
-| #010 | 1.5 semanas | 7 días | Sprint 6 |
-| #011 | 1 semana | 5 días | Sprint 7 |
-| #012 | 2 semanas | 10 días | Sprint 8-9 |
-| #013 | 1 semana | 5 días | Sprint 10 |
-| #014 | 2 semanas | 10 días | Backlog |
+| #010 | 1 semana | 5 días | Sprint 6 |
+| #011 | 1.5 semanas | 7 días | Sprint 7 |
+| #012 | 1 semana | 5 días | Sprint 8 |
+| #013 | 2 semanas | 10 días | Sprint 9-10 |
+| #014 | 1 semana | 5 días | Sprint 11 |
 | #015 | 2 semanas | 10 días | Backlog |
-| #016 | 3 semanas | 15 días | Backlog |
-| #017 | 2 semanas | 10 días | Backlog |
+| #016 | 2 semanas | 10 días | Backlog |
+| #017 | 3 semanas | 15 días | Backlog |
+| #018 | 2 semanas | 10 días | Backlog |
 
-**Total para v1.0 (issues #006-#013)**: ~13 semanas (~3 meses)
+**Total para v1.0 (issues #006-#014)**: ~14 semanas (~3.5 meses)
 
 ---
 
@@ -737,12 +789,12 @@ ad   │              │
 |---------|-------|---------|
 | 0.1.0 | 2025-02-15 | MVP inicial (#001-#004) |
 | 0.2.0 | 2025-03-03 | Documentación completa (#005) |
-| 1.0.0 | 2025-05-30 (est.) | Deploy + tests + admin (#006-#009) |
-| 1.1.0 | 2025-07-15 (est.) | Notificaciones automáticas (#010) |
-| 2.0.0 | 2025-09-30 (est.) | PostgreSQL + dashboard público (#015-#016) |
+| 1.0.0 | 2025-06-15 (est.) | Deploy + tests + admin (#006-#009) |
+| 1.1.0 | 2025-08-01 (est.) | Scraper automático + notificaciones (#010-#011) |
+| 2.0.0 | 2025-10-15 (est.) | PostgreSQL + dashboard público (#016-#017) |
 
 ---
 
 **Última actualización**: 2026-03-03
-**Versión del documento**: 1.0.0
+**Versión del documento**: 1.1.0
 **Responsable**: Fernando Blanco (@ferblanco75)

@@ -31,7 +31,13 @@ async def fetch_with_retry(url: str, retries: int = MAX_RETRIES) -> Optional[str
     Returns:
         Contenido HTML de la página o None si falla
     """
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "es-AR,es;q=0.9,en;q=0.8",
+    }
+
+    async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
         for attempt in range(retries):
             try:
                 logger.info(f"Intentando scraping: {url} (intento {attempt + 1}/{retries})")
@@ -59,75 +65,97 @@ async def fetch_with_retry(url: str, retries: int = MAX_RETRIES) -> Optional[str
 def parse_licitacion(element) -> Optional[Dict]:
     """
     Parsea un elemento HTML de licitación y extrae la información.
+    Adaptado para el sitio WordPress de comodoro.gov.ar
 
     Args:
-        element: Elemento BeautifulSoup de la licitación
+        element: Elemento BeautifulSoup de la licitación (article)
 
     Returns:
         Diccionario con datos de la licitación o None si no se puede parsear
     """
     try:
-        # Este es un ejemplo genérico - debe adaptarse al HTML real del sitio
-        # Estructura esperada (ajustar según el HTML real):
-        # <div class="licitacion">
-        #   <h3>Título de la licitación</h3>
-        #   <p class="expediente">Expte: 123/2025</p>
-        #   <p class="fecha">Fecha apertura: 15/03/2025</p>
-        #   <a href="/pliegos/123.pdf">Ver pliego</a>
-        # </div>
+        # Estructura WordPress:
+        # <article>
+        #   <div class="post_title">
+        #     <h2><a href="...">Título</a></h2>
+        #   </div>
+        #   <ul class="post_meta">
+        #     <li>fecha publicación</li>
+        #   </ul>
+        # </article>
 
-        titulo_elem = element.find("h3")
+        # Extraer título y URL
+        titulo_elem = element.select_one(".post_title h2 a")
         if not titulo_elem:
-            return None
+            # Intentar selector alternativo
+            titulo_elem = element.find("h2")
+            if not titulo_elem:
+                return None
 
         titulo = titulo_elem.get_text(strip=True)
 
-        # Extraer número de expediente
-        expediente_elem = element.find(class_="expediente")
-        expediente = expediente_elem.get_text(strip=True) if expediente_elem else None
+        # Extraer URL de la licitación (enlace al post completo)
+        url_detalle = None
+        if titulo_elem.name == "a" and titulo_elem.get("href"):
+            url_detalle = titulo_elem["href"]
+        elif titulo_elem.find("a"):
+            url_detalle = titulo_elem.find("a")["href"]
 
-        # Extraer fecha de apertura
-        fecha_elem = element.find(class_="fecha")
-        fecha_apertura = None
+        # Si es URL relativa, completar con dominio
+        if url_detalle and url_detalle.startswith("/"):
+            url_detalle = f"https://www.comodoro.gov.ar{url_detalle}"
+
+        # Extraer fecha de publicación
+        fecha_publicacion = datetime.now().strftime("%Y-%m-%d")
+        fecha_elem = element.select_one(".post_meta li")
         if fecha_elem:
             fecha_text = fecha_elem.get_text(strip=True)
-            # Intentar parsear fecha (formato esperado: "Fecha apertura: DD/MM/YYYY")
+            # Formato esperado: "día mes, año" (ej: "3 marzo, 2026")
             try:
-                if ":" in fecha_text:
-                    fecha_str = fecha_text.split(":")[-1].strip()
-                    fecha_apertura = datetime.strptime(fecha_str, "%d/%m/%Y").strftime("%Y-%m-%d")
-            except ValueError:
-                logger.warning(f"No se pudo parsear fecha: {fecha_text}")
+                # Mapeo de meses en español
+                meses = {
+                    "enero": "01", "febrero": "02", "marzo": "03", "abril": "04",
+                    "mayo": "05", "junio": "06", "julio": "07", "agosto": "08",
+                    "septiembre": "09", "octubre": "10", "noviembre": "11", "diciembre": "12"
+                }
+                partes = fecha_text.replace(",", "").split()
+                if len(partes) >= 3:
+                    dia = partes[0].zfill(2)
+                    mes = meses.get(partes[1].lower(), "01")
+                    año = partes[2]
+                    fecha_publicacion = f"{año}-{mes}-{dia}"
+            except Exception as e:
+                logger.warning(f"No se pudo parsear fecha: {fecha_text} - {e}")
 
-        # Extraer URL del pliego
-        pliego_elem = element.find("a", href=True)
-        url_pliego = None
-        if pliego_elem and pliego_elem["href"]:
-            href = pliego_elem["href"]
-            # Si es URL relativa, completar con dominio
-            if href.startswith("/"):
-                url_pliego = f"https://www.comodoro.gov.ar{href}"
-            else:
-                url_pliego = href
+        # Extraer número de licitación del título
+        numero_expediente = None
+        if "Nº" in titulo or "N°" in titulo:
+            # Intentar extraer el número (ej: "Licitación Pública Nº 01/2026")
+            import re
+            match = re.search(r'N[ºo°]\s*(\d+/\d+)', titulo, re.IGNORECASE)
+            if match:
+                numero_expediente = match.group(1)
 
-        # Extraer descripción (si existe)
-        descripcion_elem = element.find("p", class_="descripcion")
-        descripcion = descripcion_elem.get_text(strip=True) if descripcion_elem else titulo
+        # Determinar estado basado en el título o fecha
+        estado = "abierta"
+        titulo_lower = titulo.lower()
+        if "finalizada" in titulo_lower or "cerrada" in titulo_lower:
+            estado = "cerrada"
 
-        # Generar ID único basado en título y fecha
-        licitacion_id = f"SCRAPE-{abs(hash(titulo + str(fecha_apertura)))}"
+        # Generar ID único
+        licitacion_id = f"SCRAPE-{abs(hash(titulo + fecha_publicacion))}"
 
         return {
             "id": licitacion_id,
             "titulo": titulo,
-            "descripcion": descripcion,
-            "numero_expediente": expediente,
-            "fecha_publicacion": datetime.now().strftime("%Y-%m-%d"),
-            "fecha_apertura": fecha_apertura or "No especificada",
+            "descripcion": titulo,  # En la vista de tarjetas no hay descripción detallada
+            "numero_expediente": numero_expediente,
+            "fecha_publicacion": fecha_publicacion,
+            "fecha_apertura": "Ver detalle",  # Requiere entrar al post individual
             "presupuesto_oficial": None,
             "rubro": "general",
-            "estado": "abierta",
-            "url_pliego": url_pliego,
+            "estado": estado,
+            "url_pliego": url_detalle,  # URL al post completo
             "contacto": "licitacionesyconcursos@comodoro.gov.ar"
         }
 
@@ -154,17 +182,20 @@ async def scrape_licitaciones() -> List[Dict]:
     try:
         soup = BeautifulSoup(html, "html.parser")
 
-        # Buscar elementos de licitaciones
-        # NOTA: Ajustar el selector según la estructura real del sitio
-        licitacion_elements = soup.find_all("div", class_="licitacion")
+        # Buscar elementos de licitaciones (estructura WordPress)
+        # El sitio usa <article> para cada post/licitación
+        licitacion_elements = soup.find_all("article")
 
         if not licitacion_elements:
-            # Intentar selectores alternativos
-            licitacion_elements = soup.find_all("article", class_="licitacion")
+            logger.warning("No se encontraron licitaciones (artículos) en la página.")
+            # Intentar selector más específico
+            licitacion_elements = soup.select(".post-display-grid article")
 
         if not licitacion_elements:
-            logger.warning("No se encontraron licitaciones en la página. Verificar selectores CSS.")
+            logger.warning("No se encontraron licitaciones con ningún selector. Verificar estructura del sitio.")
             return []
+
+        logger.info(f"Se encontraron {len(licitacion_elements)} elementos article en la página")
 
         licitaciones = []
         for element in licitacion_elements:
@@ -172,7 +203,7 @@ async def scrape_licitaciones() -> List[Dict]:
             if licitacion:
                 licitaciones.append(licitacion)
 
-        logger.info(f"Se encontraron {len(licitaciones)} licitaciones")
+        logger.info(f"Se parsearon exitosamente {len(licitaciones)} licitaciones")
 
         return licitaciones
 
