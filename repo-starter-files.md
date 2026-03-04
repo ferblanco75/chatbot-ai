@@ -1,14 +1,377 @@
-## ESTRUCTURA COMPLETA DEL REPO — ARCHIVOS INICIALES
-## Copiar cada sección a su ruta correspondiente
+## ARCHIVOS NUEVOS DEL PORTAL — Sprint 4–5
+## Estos archivos se suman a los existentes del Sprint 1–3
 
 ════════════════════════════════════════════════════════
-ARCHIVO: backend/main.py
+ARCHIVO: backend/routers/auth.py
 ════════════════════════════════════════════════════════
 
 ```python
 """
-Asistente de Compras · Municipalidad de Comodoro Rivadavia
-Backend FastAPI — Entry point
+Router de autenticación — OTP por WhatsApp + JWT.
+POST /auth/request-code  → genera y envía código OTP
+POST /auth/verify        → valida OTP y retorna JWT
+"""
+
+import random
+import string
+import logging
+from datetime import datetime, timedelta
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+import jwt
+import os
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+# Store en memoria: {cuit: {code, expires_at}}
+# En producción reemplazar con Redis
+_otp_store: dict = {}
+
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-cambiar-en-produccion")
+JWT_EXPIRES_HOURS = int(os.getenv("JWT_EXPIRES_HOURS", "8"))
+
+
+def _load_proveedor(cuit: str) -> dict | None:
+    """Busca un proveedor en el CSV por CUIT."""
+    try:
+        df = pd.read_csv("backend/data/proveedores.csv", dtype=str)
+        # Normalizar CUIT: quitar guiones y espacios
+        cuit_clean = cuit.replace("-", "").replace(" ", "")
+        df["cuit_clean"] = df["CUIT"].str.replace("-", "").str.replace(" ", "")
+        row = df[df["cuit_clean"] == cuit_clean]
+        if row.empty:
+            return None
+        r = row.iloc[0]
+        return {
+            "cuit": r.get("CUIT", cuit),
+            "nombre": r.get("RAZON_SOCIAL", r.get("Razón Social", "Proveedor")),
+            "rubro": r.get("RUBRO", r.get("Rubro", "")),
+            "localidad": r.get("LOCALIDAD", r.get("Localidad", "")),
+            "email": r.get("EMAIL", r.get("Email", "")),
+            "whatsapp": r.get("WHATSAPP", r.get("WhatsApp", "")),
+        }
+    except Exception as e:
+        logger.error(f"Error leyendo CSV: {e}")
+        return None
+
+
+def _generate_otp() -> str:
+    """Genera código OTP de 6 caracteres alfanuméricos."""
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+
+class RequestCodeBody(BaseModel):
+    cuit: str
+
+
+class VerifyBody(BaseModel):
+    cuit: str
+    code: str
+
+
+@router.post("/request-code")
+async def request_code(body: RequestCodeBody):
+    """
+    Genera un OTP y lo envía por WhatsApp al proveedor.
+    Requiere que el CUIT esté registrado en el padrón.
+    """
+    proveedor = _load_proveedor(body.cuit)
+    if not proveedor:
+        raise HTTPException(status_code=404, detail="CUIT no encontrado en el padrón municipal")
+
+    whatsapp = proveedor.get("whatsapp", "")
+    if not whatsapp:
+        raise HTTPException(status_code=400, detail="El proveedor no tiene WhatsApp registrado")
+
+    code = _generate_otp()
+    expires_at = datetime.utcnow() + timedelta(minutes=30)
+    _otp_store[body.cuit] = {"code": code, "expires_at": expires_at}
+
+    # Enviar por WhatsApp
+    try:
+        from backend.services.whatsapp import send_whatsapp_message
+        mensaje = (
+            f"Hola {proveedor['nombre']}! 👋\n\n"
+            f"Tu código de acceso al Portal AsisteCR+ es:\n\n"
+            f"*{code}*\n\n"
+            f"⏱ Válido por 30 minutos. No lo compartas con nadie."
+        )
+        await send_whatsapp_message(whatsapp, mensaje)
+        logger.info(f"OTP enviado a {body.cuit}")
+    except Exception as e:
+        logger.error(f"Error enviando WhatsApp: {e}")
+        # En dev, loguear el código para no bloquear el flujo
+        logger.warning(f"[DEV] Código OTP para {body.cuit}: {code}")
+
+    return {
+        "status": "ok",
+        "mensaje": f"Código enviado por WhatsApp al número registrado.",
+        "nombre": proveedor["nombre"],
+    }
+
+
+@router.post("/verify")
+async def verify(body: VerifyBody):
+    """
+    Valida el OTP y retorna un JWT firmado.
+    """
+    stored = _otp_store.get(body.cuit)
+
+    if not stored:
+        raise HTTPException(status_code=400, detail="No hay código activo para este CUIT. Solicitá uno nuevo.")
+
+    if datetime.utcnow() > stored["expires_at"]:
+        del _otp_store[body.cuit]
+        raise HTTPException(status_code=400, detail="El código expiró. Solicitá uno nuevo.")
+
+    if stored["code"].upper() != body.code.strip().upper():
+        raise HTTPException(status_code=400, detail="Código incorrecto.")
+
+    # Código válido — generar JWT
+    del _otp_store[body.cuit]
+    proveedor = _load_proveedor(body.cuit)
+
+    payload = {
+        "cuit": body.cuit,
+        "nombre": proveedor["nombre"],
+        "rubro": proveedor["rubro"],
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRES_HOURS),
+    }
+
+    token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+    logger.info(f"JWT generado para {body.cuit}")
+
+    return {
+        "token": token,
+        "nombre": proveedor["nombre"],
+        "cuit": body.cuit,
+        "rubro": proveedor["rubro"],
+    }
+```
+
+════════════════════════════════════════════════════════
+ARCHIVO: backend/services/auth_service.py
+════════════════════════════════════════════════════════
+
+```python
+"""
+Servicio de autenticación — validación de JWT para rutas protegidas.
+Usar como dependencia en endpoints que requieren proveedor autenticado.
+"""
+
+import os
+import jwt
+from fastapi import HTTPException, Header
+from typing import Optional
+
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-cambiar-en-produccion")
+
+
+def get_current_proveedor(authorization: Optional[str] = Header(None)) -> dict:
+    """
+    Dependencia FastAPI que valida el JWT del header Authorization.
+    Uso: proveedor = Depends(get_current_proveedor)
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token de autenticación requerido")
+
+    token = authorization.split(" ")[1]
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Sesión expirada. Ingresá nuevamente.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token inválido.")
+
+
+def get_optional_proveedor(authorization: Optional[str] = Header(None)) -> dict | None:
+    """
+    Igual a get_current_proveedor pero no lanza error si no hay token.
+    Para endpoints que funcionan con y sin auth (ej: /chat).
+    """
+    if not authorization:
+        return None
+    try:
+        return get_current_proveedor(authorization)
+    except HTTPException:
+        return None
+```
+
+════════════════════════════════════════════════════════
+ARCHIVO: backend/routers/proveedores.py  (ACTUALIZADO)
+════════════════════════════════════════════════════════
+
+```python
+"""
+Router de proveedores.
+GET /proveedores          → busca por rubro (público)
+GET /proveedores/{cuit}   → perfil del proveedor (requiere JWT)
+"""
+
+import pandas as pd
+import logging
+from fastapi import APIRouter, HTTPException, Depends
+from backend.services.auth_service import get_current_proveedor
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+CSV_PATH = "backend/data/proveedores.csv"
+
+
+def _load_df():
+    return pd.read_csv(CSV_PATH, dtype=str).fillna("")
+
+
+@router.get("")
+async def buscar_proveedores(rubro: str = "", localidad: str = "", q: str = ""):
+    """Búsqueda pública de proveedores por rubro, localidad o texto libre."""
+    df = _load_df()
+    if rubro:
+        df = df[df.apply(lambda r: rubro.lower() in str(r).lower(), axis=1)]
+    if localidad:
+        df = df[df.apply(lambda r: localidad.lower() in str(r).lower(), axis=1)]
+    if q:
+        df = df[df.apply(lambda r: q.lower() in str(r).lower(), axis=1)]
+    return {"total": len(df), "proveedores": df.head(50).to_dict(orient="records")}
+
+
+@router.get("/{cuit}")
+async def get_perfil(cuit: str, proveedor_auth: dict = Depends(get_current_proveedor)):
+    """
+    Retorna el perfil completo del proveedor autenticado.
+    Solo puede consultar su propio CUIT.
+    """
+    cuit_clean = cuit.replace("-", "").replace(" ", "")
+    auth_cuit_clean = proveedor_auth["cuit"].replace("-", "").replace(" ", "")
+
+    if cuit_clean != auth_cuit_clean:
+        raise HTTPException(status_code=403, detail="No podés consultar datos de otro proveedor.")
+
+    df = _load_df()
+    df["cuit_clean"] = df["CUIT"].str.replace("-", "").str.replace(" ", "")
+    row = df[df["cuit_clean"] == cuit_clean]
+
+    if row.empty:
+        raise HTTPException(status_code=404, detail="Proveedor no encontrado.")
+
+    r = row.iloc[0]
+    return {
+        "cuit": r.get("CUIT", cuit),
+        "nombre": r.get("RAZON_SOCIAL", r.get("Razón Social", "")),
+        "rubro": r.get("RUBRO", r.get("Rubro", "")),
+        "localidad": r.get("LOCALIDAD", r.get("Localidad", "")),
+        "email": r.get("EMAIL", r.get("Email", "")),
+        "whatsapp": r.get("WHATSAPP", r.get("WhatsApp", "")),
+        "estado_inscripcion": "activo",  # TODO: calcular desde campo fecha_vencimiento
+        "completitud_legajo": 78,         # TODO: calcular desde campos presentes
+    }
+```
+
+════════════════════════════════════════════════════════
+ARCHIVO: backend/routers/chat.py  (ACTUALIZADO — con contexto del proveedor)
+════════════════════════════════════════════════════════
+
+```python
+"""
+Router del chat IA — POST /chat con streaming SSE.
+Si hay JWT válido, inyecta el contexto del proveedor en el system prompt.
+"""
+
+import os
+import json
+import logging
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from typing import Optional
+import anthropic
+from backend.services.auth_service import get_optional_proveedor
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+SYSTEM_BASE = """Sos AsisteCR+, el asistente de inteligencia artificial del sistema de compras y contrataciones públicas municipales.
+
+Tu función es ayudar a los proveedores a:
+- Entender las licitaciones activas y sus pliegos
+- Preparar la documentación necesaria para presentar ofertas
+- Consultar normativa vigente (Ley II N°76, Ley N°4829 Compre Chubut, Decreto 777/06)
+- Calcular garantías y plazos
+- Resolver dudas sobre el proceso licitatorio
+
+Respondé siempre en español rioplatense, con tono amigable y claro. Usá viñetas y formato simple.
+Cuando no sepas algo con certeza, recomendá consultar con la Dirección de Licitaciones: licitacionesyconcursos@comodoro.gov.ar"""
+
+
+def _build_system_prompt(proveedor: dict | None) -> str:
+    if not proveedor:
+        return SYSTEM_BASE
+    return (
+        SYSTEM_BASE
+        + f"\n\n---\nPROVEEDOR AUTENTICADO:\n"
+        + f"- Nombre: {proveedor.get('nombre', 'Proveedor')}\n"
+        + f"- CUIT: {proveedor.get('cuit', '')}\n"
+        + f"- Rubro: {proveedor.get('rubro', '')}\n"
+        + "\nPersonalizá las respuestas según su rubro. "
+        + "Si pregunta sobre sus licitaciones, referite a las que coinciden con su rubro."
+    )
+
+
+class ChatMessage(BaseModel):
+    role: str  # "user" o "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+    context: Optional[str] = None  # Contexto adicional (ej: licitación específica)
+
+
+@router.post("")
+async def chat(
+    body: ChatRequest,
+    proveedor: dict | None = Depends(get_optional_proveedor)
+):
+    """Chat con streaming SSE. Acepta historial de mensajes."""
+
+    system_prompt = _build_system_prompt(proveedor)
+    if body.context:
+        system_prompt += f"\n\nCONTEXTO ADICIONAL:\n{body.context}"
+
+    messages = [{"role": m.role, "content": m.content} for m in body.messages]
+
+    def stream_response():
+        with client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=system_prompt,
+            messages=messages,
+        ) as stream:
+            for text in stream.text_stream:
+                yield f"data: {json.dumps({'text': text})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        stream_response(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+```
+
+════════════════════════════════════════════════════════
+ARCHIVO: backend/main.py  (ACTUALIZADO — agrega router auth)
+════════════════════════════════════════════════════════
+
+```python
+"""
+AsisteCR+ — Backend FastAPI
+Entry point: uvicorn backend.main:app
 """
 
 import logging
@@ -17,7 +380,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
 
-from backend.routers import licitaciones, proveedores, notificaciones, chat
+from backend.routers import licitaciones, proveedores, notificaciones, chat, auth
 from backend.services.scraper import run_scraper
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -26,24 +389,22 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Ejecuta el scraper al arrancar el servidor."""
     logger.info("Iniciando backend — corriendo scraper inicial...")
     try:
         await run_scraper()
-        logger.info("Scraper completado al iniciar.")
+        logger.info("Scraper completado.")
     except Exception as e:
         logger.warning(f"Scraper falló al iniciar (usando cache): {e}")
     yield
 
 
 app = FastAPI(
-    title="Asistente de Compras — Comodoro Rivadavia",
-    description="API para el chatbot municipal de compras y contrataciones",
-    version="0.1.0",
+    title="AsisteCR+ — Plataforma Municipal de Compras",
+    description="API para el portal de proveedores y chatbot de licitaciones",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
-# CORS — el frontend en Vercel necesita acceder
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:5500").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -53,15 +414,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(licitaciones.router, prefix="/licitaciones", tags=["Licitaciones"])
-app.include_router(proveedores.router, prefix="/proveedores", tags=["Proveedores"])
-app.include_router(notificaciones.router, prefix="/notificar", tags=["Notificaciones"])
-app.include_router(chat.router, prefix="/chat", tags=["Chat IA"])
+app.include_router(auth.router,          prefix="/auth",       tags=["Auth"])
+app.include_router(licitaciones.router,  prefix="/licitaciones", tags=["Licitaciones"])
+app.include_router(proveedores.router,   prefix="/proveedores",  tags=["Proveedores"])
+app.include_router(notificaciones.router,prefix="/notificar",    tags=["Notificaciones"])
+app.include_router(chat.router,          prefix="/chat",          tags=["Chat IA"])
 
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "servicio": "Asistente de Compras · Comodoro Rivadavia"}
+    return {"status": "ok", "servicio": "AsisteCR+ · Municipalidad de Comodoro Rivadavia", "version": "0.2.0"}
 
 
 @app.get("/health")
@@ -70,679 +432,235 @@ async def health():
 ```
 
 ════════════════════════════════════════════════════════
-ARCHIVO: backend/routers/licitaciones.py
-════════════════════════════════════════════════════════
-
-```python
-"""Router de licitaciones — GET para consultar, POST para crear (admin)."""
-
-import json
-import os
-from datetime import datetime
-from pathlib import Path
-from typing import Optional
-
-from fastapi import APIRouter, HTTPException, Header
-from pydantic import BaseModel
-
-router = APIRouter()
-DATA_PATH = Path(__file__).parent.parent / "data" / "licitaciones.json"
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "comodoro2025")
-
-
-class LicitacionCreate(BaseModel):
-    titulo: str
-    numero: str
-    rubro: str
-    descripcion: str
-    fecha_apertura: str  # ISO format: "2026-02-15"
-    rubros_notificar: list[str] = []
-
-
-def _load() -> list[dict]:
-    if not DATA_PATH.exists():
-        return []
-    return json.loads(DATA_PATH.read_text(encoding="utf-8"))
-
-
-def _save(data: list[dict]):
-    DATA_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-@router.get("/")
-async def get_licitaciones(estado: Optional[str] = None):
-    """Retorna todas las licitaciones. Filtrar por estado: activa | cerrada."""
-    licitaciones = _load()
-    if estado:
-        licitaciones = [l for l in licitaciones if l.get("estado") == estado]
-    return {"licitaciones": licitaciones, "total": len(licitaciones)}
-
-
-@router.get("/{numero}")
-async def get_licitacion(numero: str):
-    licitaciones = _load()
-    match = next((l for l in licitaciones if l["numero"] == numero), None)
-    if not match:
-        raise HTTPException(status_code=404, detail=f"Licitación {numero} no encontrada")
-    return match
-
-
-@router.post("/", status_code=201)
-async def crear_licitacion(
-    licitacion: LicitacionCreate,
-    x_admin_password: str = Header(..., alias="X-Admin-Password"),
-):
-    """Crear nueva licitación (requiere header X-Admin-Password)."""
-    if x_admin_password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Contraseña de administrador incorrecta")
-
-    licitaciones = _load()
-    nueva = {
-        **licitacion.model_dump(),
-        "estado": "activa",
-        "fecha_publicacion": datetime.now().isoformat()[:10],
-        "url": f"https://www.comodoro.gov.ar/licitaciones/{licitacion.numero.lower().replace('/', '-')}",
-    }
-    licitaciones.append(nueva)
-    _save(licitaciones)
-    return {"mensaje": "Licitación creada exitosamente", "licitacion": nueva}
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: backend/routers/proveedores.py
-════════════════════════════════════════════════════════
-
-```python
-"""Router de proveedores — búsqueda en el CSV municipal."""
-
-from fastapi import APIRouter, Query
-from backend.services.proveedores_service import buscar_proveedores, get_stats
-
-router = APIRouter()
-
-
-@router.get("/")
-async def search_proveedores(
-    rubro: str = Query(..., description="Keyword de búsqueda. Ej: limpieza, construccion, IT"),
-    localidad: str = Query(default="", description="Filtrar por localidad. Ej: Comodoro Rivadavia"),
-    limit: int = Query(default=20, le=100),
-):
-    """Busca proveedores del padrón municipal por rubro y/o localidad."""
-    resultados = buscar_proveedores(rubro=rubro, localidad=localidad, limit=limit)
-    return {
-        "query": {"rubro": rubro, "localidad": localidad},
-        "total": len(resultados),
-        "proveedores": resultados,
-    }
-
-
-@router.get("/stats")
-async def get_proveedores_stats():
-    """Estadísticas del padrón: total, localidades, etc."""
-    return get_stats()
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: backend/routers/chat.py
-════════════════════════════════════════════════════════
-
-```python
-"""Router de chat — proxy a Anthropic API con contexto dinámico."""
-
-import json
-import os
-from pathlib import Path
-
-import anthropic
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-
-router = APIRouter()
-DATA_PATH = Path(__file__).parent.parent / "data" / "licitaciones.json"
-
-SYSTEM_PROMPT_BASE = """Sos el asistente digital oficial de Compras y Contrataciones de la Municipalidad de Comodoro Rivadavia, Chubut, Argentina.
-
-Usás voseo rioplatense, tono amigable y profesional. Respuestas concisas (máx 200 palabras salvo que pidan detalle).
-
-CONOCIMIENTO BASE:
-- Inscripción de proveedores: ARCA/Monotributo, IIBB, CBU, habilitación. Email: controldocumentalyproveedores@comodoro.gov.ar | WhatsApp: 2975819952
-- Tipos: Licitación Pública (abierta), Privada (invitados), Directa (montos menores), Subasta Pública
-- Proceso: 1) Obtener pliego en Namuncurá 26 o licitacionesyconcursos@comodoro.gov.ar 2) Leer PBCG + PBCP 3) Sobre cerrado antes de la hora de apertura
-- Normativa: Ley II N°76 (contrataciones), Ley N°4829 (Compre Chubut — preferencia proveedores locales)
-- Contacto: licitacionesyconcursos@comodoro.gov.ar · Namuncurá 26 · días hábiles hasta 12:00 hs del día anterior a apertura
-
-{licitaciones_activas}
-
-Si no sabés algo con certeza, referí al contacto oficial. No inventés información normativa."""
-
-
-def _get_licitaciones_context() -> str:
-    try:
-        licitaciones = json.loads(DATA_PATH.read_text(encoding="utf-8"))
-        activas = [l for l in licitaciones if l.get("estado") == "activa"]
-        if not activas:
-            return "LICITACIONES: No hay licitaciones activas registradas actualmente."
-        items = "\n".join(
-            f"- LP {l['numero']}: {l['titulo']} · Apertura: {l.get('fecha_apertura', 'a confirmar')}"
-            for l in activas[:10]
-        )
-        return f"LICITACIONES ACTIVAS HOY:\n{items}"
-    except Exception:
-        return "LICITACIONES: Información no disponible en este momento."
-
-
-class ChatMessage(BaseModel):
-    role: str  # "user" | "assistant"
-    content: str
-
-
-class ChatRequest(BaseModel):
-    messages: list[ChatMessage]
-
-
-@router.post("/")
-async def chat(request: ChatRequest):
-    """Proxy a Anthropic API con contexto dinámico de licitaciones."""
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY no configurada en el servidor")
-
-    system = SYSTEM_PROMPT_BASE.format(licitaciones_activas=_get_licitaciones_context())
-    client = anthropic.Anthropic(api_key=api_key)
-
-    try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=700,
-            system=system,
-            messages=[{"role": m.role, "content": m.content} for m in request.messages],
-        )
-        return {"content": response.content[0].text, "usage": response.usage.model_dump()}
-    except anthropic.APIError as e:
-        raise HTTPException(status_code=502, detail=f"Error de Anthropic API: {str(e)}")
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: backend/routers/notificaciones.py
-════════════════════════════════════════════════════════
-
-```python
-"""Router de notificaciones — dispara WhatsApp a proveedores por rubro."""
-
-import json
-import logging
-import os
-from datetime import datetime
-from pathlib import Path
-
-from fastapi import APIRouter, Header, HTTPException
-from pydantic import BaseModel
-
-from backend.services.proveedores_service import buscar_proveedores
-from backend.services.whatsapp import enviar_whatsapp
-
-router = APIRouter()
-logger = logging.getLogger(__name__)
-LOG_PATH = Path(__file__).parent.parent / "data" / "notif-log.json"
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "comodoro2025")
-
-
-class NotificacionRequest(BaseModel):
-    numero_licitacion: str
-    titulo: str
-    rubro: str
-    fecha_apertura: str
-    url: str = ""
-
-
-@router.post("/")
-async def notificar_proveedores(
-    req: NotificacionRequest,
-    x_admin_password: str = Header(..., alias="X-Admin-Password"),
-):
-    """Envía WhatsApp a todos los proveedores del rubro especificado."""
-    if x_admin_password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Contraseña incorrecta")
-
-    proveedores = buscar_proveedores(rubro=req.rubro, localidad="", limit=500)
-    con_whatsapp = [p for p in proveedores if p.get("whatsapp")]
-
-    if not con_whatsapp:
-        return {
-            "enviados": 0,
-            "mensaje": f"No hay proveedores con WhatsApp registrado para el rubro '{req.rubro}'",
-        }
-
-    mensaje = (
-        f"📢 *Nueva licitación municipal*\n\n"
-        f"*{req.titulo}* (Nº {req.numero_licitacion})\n"
-        f"📅 Apertura: {req.fecha_apertura}\n"
-        f"🔗 Ver pliego: {req.url or 'https://www.comodoro.gov.ar/secciones/licitaciones/'}\n\n"
-        f"Consultas: licitacionesyconcursos@comodoro.gov.ar\n"
-        f"Respondé este mensaje para más información."
-    )
-
-    enviados, fallidos = 0, 0
-    for proveedor in con_whatsapp:
-        ok = await enviar_whatsapp(numero=proveedor["whatsapp"], mensaje=mensaje)
-        if ok:
-            enviados += 1
-        else:
-            fallidos += 1
-
-    # Log
-    _log_notificacion(req, enviados, fallidos)
-
-    return {
-        "licitacion": req.numero_licitacion,
-        "rubro": req.rubro,
-        "proveedores_encontrados": len(con_whatsapp),
-        "enviados": enviados,
-        "fallidos": fallidos,
-    }
-
-
-def _log_notificacion(req: NotificacionRequest, enviados: int, fallidos: int):
-    log = []
-    if LOG_PATH.exists():
-        log = json.loads(LOG_PATH.read_text(encoding="utf-8"))
-    log.append({
-        "timestamp": datetime.now().isoformat(),
-        "licitacion": req.numero_licitacion,
-        "rubro": req.rubro,
-        "enviados": enviados,
-        "fallidos": fallidos,
-    })
-    LOG_PATH.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: backend/services/scraper.py
-════════════════════════════════════════════════════════
-
-```python
-"""Scraper de licitaciones de comodoro.gov.ar."""
-
-import json
-import logging
-from datetime import datetime
-from pathlib import Path
-
-import httpx
-from bs4 import BeautifulSoup
-
-logger = logging.getLogger(__name__)
-BASE_URL = "https://www.comodoro.gov.ar/secciones/licitaciones/"
-DATA_PATH = Path(__file__).parent.parent / "data" / "licitaciones.json"
-
-
-async def run_scraper() -> list[dict]:
-    """Scrapea el sitio y actualiza licitaciones.json. Retorna la lista resultante."""
-    logger.info(f"Scrapeando: {BASE_URL}")
-    try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            resp = await client.get(BASE_URL)
-            resp.raise_for_status()
-    except httpx.HTTPError as e:
-        logger.error(f"Error HTTP al scrapear: {e}")
-        return _load_cached()
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-    licitaciones = _parse(soup)
-
-    # Merge con licitaciones manuales (creadas desde el admin)
-    cached = _load_cached()
-    manuales = [l for l in cached if l.get("origen") == "manual"]
-    merged = {l["numero"]: l for l in licitaciones}
-    for m in manuales:
-        if m["numero"] not in merged:
-            merged[m["numero"]] = m
-
-    result = list(merged.values())
-    DATA_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    logger.info(f"Scraper OK: {len(licitaciones)} del sitio + {len(manuales)} manuales")
-    return result
-
-
-def _parse(soup: BeautifulSoup) -> list[dict]:
-    """Extrae licitaciones del HTML del sitio municipal."""
-    licitaciones = []
-    # El sitio usa posts de WordPress — buscar por artículos o lista
-    articles = soup.find_all("article") or soup.find_all("li", class_=lambda c: c and "licitacion" in c.lower())
-
-    for article in articles:
-        titulo_tag = article.find(["h1", "h2", "h3", "a"])
-        if not titulo_tag:
-            continue
-        titulo = titulo_tag.get_text(strip=True)
-        if not titulo:
-            continue
-
-        # Inferir estado desde el título (el sitio pone "(finalizada)" o "(Finalizado)")
-        titulo_lower = titulo.lower()
-        estado = "cerrada" if any(w in titulo_lower for w in ["finalizada", "finalizado", "cerrada"]) else "activa"
-
-        # Limpiar título
-        titulo_limpio = titulo.replace("(finalizada)", "").replace("(Finalizado)", "").replace("(finalizado)", "").strip()
-
-        # Extraer número de licitación del título
-        import re
-        num_match = re.search(r"N[°ºo]?\s*(\d+/\d+)", titulo, re.IGNORECASE)
-        numero = num_match.group(1) if num_match else f"SN-{len(licitaciones)+1}"
-
-        # Fecha de publicación
-        fecha_tag = article.find("time") or article.find(class_=lambda c: c and "date" in str(c).lower())
-        fecha = fecha_tag.get("datetime", fecha_tag.get_text(strip=True))[:10] if fecha_tag else datetime.now().isoformat()[:10]
-
-        # URL del artículo
-        link_tag = article.find("a", href=True)
-        url = link_tag["href"] if link_tag else BASE_URL
-
-        licitaciones.append({
-            "numero": numero,
-            "titulo": titulo_limpio,
-            "estado": estado,
-            "fecha_publicacion": fecha,
-            "fecha_apertura": "",
-            "descripcion": "",
-            "url": url,
-            "origen": "scraper",
-        })
-
-    return licitaciones
-
-
-def _load_cached() -> list[dict]:
-    if DATA_PATH.exists():
-        return json.loads(DATA_PATH.read_text(encoding="utf-8"))
-    return []
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: backend/services/proveedores_service.py
-════════════════════════════════════════════════════════
-
-```python
-"""Servicio de búsqueda en el CSV de proveedores municipales."""
-
-import logging
-from functools import lru_cache
-from pathlib import Path
-
-import pandas as pd
-
-logger = logging.getLogger(__name__)
-CSV_PATH = Path(__file__).parent.parent / "data" / "proveedores.csv"
-
-
-@lru_cache(maxsize=1)
-def _load_df() -> pd.DataFrame:
-    """Carga el CSV una sola vez y lo cachea en memoria."""
-    df = pd.read_csv(CSV_PATH, dtype=str).fillna("")
-    # Normalizar nombres de columnas
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-    logger.info(f"CSV cargado: {len(df)} proveedores")
-    return df
-
-
-def buscar_proveedores(rubro: str, localidad: str = "", limit: int = 20) -> list[dict]:
-    """
-    Busca proveedores por rubro (keyword en razón social o nombre fantasía)
-    y opcionalmente filtra por localidad.
-    """
-    df = _load_df().copy()
-    rubro_lower = rubro.lower()
-
-    # Búsqueda en razón social y nombre fantasía
-    mask = (
-        df.get("razon_social", pd.Series(dtype=str)).str.lower().str.contains(rubro_lower, na=False)
-        | df.get("nombre_fantasia", pd.Series(dtype=str)).str.lower().str.contains(rubro_lower, na=False)
-    )
-    resultado = df[mask]
-
-    if localidad:
-        localidad_lower = localidad.lower()
-        resultado = resultado[
-            resultado.get("localidad", pd.Series(dtype=str)).str.lower().str.contains(localidad_lower, na=False)
-        ]
-
-    return resultado.head(limit).to_dict(orient="records")
-
-
-def get_stats() -> dict:
-    df = _load_df()
-    localidades = df.get("localidad", pd.Series(dtype=str)).value_counts().head(10).to_dict()
-    return {
-        "total_proveedores": len(df),
-        "top_localidades": localidades,
-    }
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: backend/services/whatsapp.py
-════════════════════════════════════════════════════════
-
-```python
-"""Wrapper de Twilio para envío de mensajes WhatsApp."""
-
-import logging
-import os
-
-from twilio.rest import Client
-from twilio.base.exceptions import TwilioRestException
-
-logger = logging.getLogger(__name__)
-
-
-async def enviar_whatsapp(numero: str, mensaje: str) -> bool:
-    """
-    Envía un mensaje WhatsApp al número dado via Twilio.
-    número debe incluir código de país, ej: '+5492975123456'
-    Retorna True si fue exitoso, False si falló.
-    """
-    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-    from_number = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
-
-    if not account_sid or not auth_token:
-        logger.warning("Twilio no configurado — saltando envío de WhatsApp")
-        return False
-
-    to_number = f"whatsapp:{numero}" if not numero.startswith("whatsapp:") else numero
-
-    try:
-        client = Client(account_sid, auth_token)
-        message = client.messages.create(
-            body=mensaje,
-            from_=from_number,
-            to=to_number,
-        )
-        logger.info(f"WhatsApp enviado a {numero}: SID {message.sid}")
-        return True
-    except TwilioRestException as e:
-        logger.error(f"Error Twilio al enviar a {numero}: {e}")
-        return False
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: backend/requirements.txt
+ARCHIVO: backend/requirements.txt  (ACTUALIZADO)
 ════════════════════════════════════════════════════════
 
 ```
-fastapi==0.115.6
-uvicorn[standard]==0.32.1
-anthropic==0.40.0
-httpx==0.28.1
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+anthropic==0.28.0
+twilio==9.2.0
+httpx==0.27.0
 beautifulsoup4==4.12.3
-pandas==2.2.3
-twilio==9.3.7
+pandas==2.2.2
 python-dotenv==1.0.1
-pydantic==2.10.3
+PyJWT==2.8.0
+python-jose[cryptography]==3.3.0
+pytest==8.2.0
+pytest-asyncio==0.23.7
+httpx==0.27.0
 ```
 
 ════════════════════════════════════════════════════════
-ARCHIVO: backend/.env.example
+ARCHIVO: backend/.env.example  (ACTUALIZADO)
 ════════════════════════════════════════════════════════
 
-```
-# Copiar a .env y completar con valores reales
-# NUNCA commitear el .env real
+```bash
+# Anthropic
+ANTHROPIC_API_KEY=sk-ant-api03-...
 
-ANTHROPIC_API_KEY=sk-ant-api03-XXXXXXXX
-TWILIO_ACCOUNT_SID=ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-TWILIO_AUTH_TOKEN=your_auth_token_here
+# Twilio WhatsApp
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
-ADMIN_PASSWORD=comodoro2025
-CORS_ORIGINS=https://comodoro-asistente.vercel.app,http://localhost:3000
+
+# Auth JWT
+JWT_SECRET=reemplazar-con-string-aleatorio-largo-y-seguro
+JWT_EXPIRES_HOURS=8
+
+# Admin
+ADMIN_PASSWORD=reemplazar-en-produccion
+
+# CORS
+CORS_ORIGINS=https://tu-app.vercel.app,http://localhost:3000
 ```
 
 ════════════════════════════════════════════════════════
-ARCHIVO: backend/tests/test_proveedores.py
+ARCHIVO: login.html  (NUEVO — autenticación por CUIT + OTP)
 ════════════════════════════════════════════════════════
 
-```python
-"""Tests básicos del servicio de proveedores."""
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AsisteCR+ · Acceso Proveedor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="components.css">
+  <style>
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0B2347 0%, #1B3B6A 100%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .login-box {
+      background: #fff;
+      border-radius: 20px;
+      padding: 36px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .brand { text-align: center; margin-bottom: 32px; }
+    .brand-name { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: #0B2347; }
+    .brand-name span { color: #E8A000; }
+    .brand-sub { font-size: 13px; color: #6B7A90; margin-top: 4px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    .field-label { font-size: 12px; font-weight: 600; color: #6B7A90; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .field-input {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid #E8EDF5; border-radius: 10px;
+      font-size: 15px; font-family: 'DM Sans', sans-serif;
+      outline: none; transition: border-color .2s;
+      background: #F4F7FC;
+    }
+    .field-input:focus { border-color: #2278D4; background: #fff; }
+    .btn-submit {
+      width: 100%; padding: 13px;
+      background: #1055A8; color: #fff;
+      border: none; border-radius: 10px;
+      font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all .2s; margin-top: 20px;
+    }
+    .btn-submit:hover { background: #2278D4; transform: translateY(-1px); }
+    .btn-submit:disabled { background: #B0BCCF; cursor: not-allowed; transform: none; }
+    .msg { font-size: 13px; margin-top: 12px; min-height: 20px; }
+    .msg.error { color: #C0302A; }
+    .msg.success { color: #0F7A45; }
+    .otp-note { background: #F4F7FC; border-radius: 10px; padding: 14px; font-size: 12px; color: #6B7A90; margin-top: 20px; }
+    .back-link { text-align: center; margin-top: 16px; }
+    .back-link a { font-size: 12px; color: #6B7A90; text-decoration: none; }
+    .back-link a:hover { color: #1055A8; }
+  </style>
+</head>
+<body>
+<div class="login-box">
+  <div class="brand">
+    <div class="brand-name">Asiste<span>CR+</span></div>
+    <div class="brand-sub">Portal del Proveedor Municipal</div>
+  </div>
 
-import pytest
-from backend.services.proveedores_service import buscar_proveedores, get_stats
+  <!-- Paso 1: CUIT -->
+  <div class="step active" id="step1">
+    <h2 style="font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:#0B2347; margin-bottom:6px;">Ingresá tu CUIT</h2>
+    <p style="font-size:13px; color:#6B7A90; margin-bottom:24px;">Te enviaremos un código de acceso por WhatsApp.</p>
+    <div style="margin-bottom:16px;">
+      <div class="field-label">CUIT de tu empresa</div>
+      <input class="field-input" type="text" id="cuit-input" placeholder="20-28734190-4" maxlength="13">
+    </div>
+    <button class="btn-submit" id="btn-step1" onclick="requestCode()">Enviar código por WhatsApp →</button>
+    <div class="msg" id="msg-step1"></div>
+    <div class="otp-note">🔒 No necesitás contraseña. El acceso es mediante un código de un solo uso válido 30 minutos.</div>
+  </div>
 
+  <!-- Paso 2: OTP -->
+  <div class="step" id="step2">
+    <h2 style="font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:#0B2347; margin-bottom:6px;">Ingresá tu código</h2>
+    <p style="font-size:13px; color:#6B7A90; margin-bottom:24px;" id="step2-sub">Te enviamos un código de 6 caracteres por WhatsApp.</p>
+    <div style="margin-bottom:16px;">
+      <div class="field-label">Código de acceso</div>
+      <input class="field-input" type="text" id="otp-input" placeholder="Ej: A3F7K2" maxlength="6" style="text-transform:uppercase; letter-spacing:.2em; font-size:22px; text-align:center;">
+    </div>
+    <button class="btn-submit" id="btn-step2" onclick="verifyCode()">Ingresar al portal →</button>
+    <div class="msg" id="msg-step2"></div>
+    <div class="back-link"><a href="#" onclick="goBack()">← Cambiar CUIT</a></div>
+  </div>
+</div>
 
-def test_csv_carga():
-    stats = get_stats()
-    assert stats["total_proveedores"] > 0, "El CSV debe tener al menos 1 proveedor"
+<script>
+const API = 'http://localhost:8000'; // Cambiar en prod
 
+let cuitActual = '';
 
-def test_busqueda_retorna_resultados():
-    resultados = buscar_proveedores(rubro="srl")
-    assert len(resultados) > 0, "Buscar 'srl' debe retornar resultados"
+async function requestCode() {
+  const cuit = document.getElementById('cuit-input').value.trim();
+  if (!cuit) { showMsg('step1', 'Ingresá tu CUIT.', 'error'); return; }
 
+  const btn = document.getElementById('btn-step1');
+  btn.disabled = true; btn.textContent = 'Enviando...';
 
-def test_busqueda_con_localidad():
-    resultados = buscar_proveedores(rubro="", localidad="Comodoro")
-    assert len(resultados) > 0
-
-
-def test_limite_resultados():
-    resultados = buscar_proveedores(rubro="a", limit=5)
-    assert len(resultados) <= 5
-
-
-def test_sin_resultados_keyword_inexistente():
-    resultados = buscar_proveedores(rubro="zzzzzzzzz_inexistente_xyz")
-    assert len(resultados) == 0
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: .github/workflows/deploy.yml
-════════════════════════════════════════════════════════
-
-```yaml
-name: CI/CD — Tests + Deploy
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  test-backend:
-    name: Tests Backend (Python)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio
-
-      - name: Run tests
-        run: |
-          cd backend
-          pytest tests/ -v
-        env:
-          # Tests no necesitan credenciales reales
-          ANTHROPIC_API_KEY: "sk-ant-test"
-          TWILIO_ACCOUNT_SID: "test"
-          TWILIO_AUTH_TOKEN: "test"
-
-  deploy-frontend:
-    name: Deploy Frontend (Vercel)
-    needs: test-backend
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy a Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod"
-```
-
-════════════════════════════════════════════════════════
-ARCHIVO: vercel.json
-════════════════════════════════════════════════════════
-
-```json
-{
-  "version": 2,
-  "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "admin.html", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/admin", "dest": "/admin.html" },
-    { "src": "/(.*)", "dest": "/$1" }
-  ]
+  try {
+    const res = await fetch(`${API}/auth/request-code`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({cuit})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error al enviar código');
+    cuitActual = cuit;
+    document.getElementById('step2-sub').textContent = `Código enviado a ${data.nombre} por WhatsApp.`;
+    showStep('step2');
+  } catch (e) {
+    showMsg('step1', e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar código por WhatsApp →';
+  }
 }
+
+async function verifyCode() {
+  const code = document.getElementById('otp-input').value.trim().toUpperCase();
+  if (code.length < 6) { showMsg('step2', 'Ingresá los 6 caracteres del código.', 'error'); return; }
+
+  const btn = document.getElementById('btn-step2');
+  btn.disabled = true; btn.textContent = 'Verificando...';
+
+  try {
+    const res = await fetch(`${API}/auth/verify`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({cuit: cuitActual, code})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Código incorrecto');
+    sessionStorage.setItem('asistecr_token', data.token);
+    sessionStorage.setItem('asistecr_nombre', data.nombre);
+    sessionStorage.setItem('asistecr_cuit', data.cuit);
+    sessionStorage.setItem('asistecr_rubro', data.rubro);
+    showMsg('step2', `¡Bienvenido, ${data.nombre}! Redirigiendo...`, 'success');
+    setTimeout(() => { window.location.href = 'portal.html'; }, 1000);
+  } catch (e) {
+    showMsg('step2', e.message, 'error');
+    btn.disabled = false; btn.textContent = 'Ingresar al portal →';
+  }
+}
+
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goBack() { showStep('step1'); }
+function showMsg(step, text, type) {
+  const el = document.getElementById(`msg-${step}`);
+  el.textContent = text; el.className = `msg ${type}`;
+}
+</script>
+</body>
+</html>
 ```
 
 ════════════════════════════════════════════════════════
-ARCHIVO: .gitignore
+NOTAS DE INTEGRACIÓN
 ════════════════════════════════════════════════════════
 
-```
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-.venv/
-venv/
-env/
-*.egg-info/
-dist/
-.pytest_cache/
+1. **Agregar al backend/main.py**: importar y registrar `auth.router` con prefix="/auth"
+   (ver archivo main.py actualizado arriba)
 
-# Env
-.env
-.env.local
-*.env
+2. **Cambiar en portal.html**: al cargar, verificar JWT en sessionStorage
+   ```javascript
+   const token = sessionStorage.getItem('asistecr_token');
+   if (!token) window.location.href = 'login.html';
+   ```
 
-# Data (el CSV va al repo, los logs no)
-backend/data/notif-log.json
-backend/data/licitaciones.json
+3. **En los fetch del portal**, agregar el header:
+   ```javascript
+   headers: { 'Authorization': `Bearer ${sessionStorage.getItem('asistecr_token')}` }
+   ```
 
-# Node (si se agrega algún script JS)
-node_modules/
-.npm/
+4. **En el endpoint /chat**, el contexto del proveedor se inyecta automáticamente
+   si el header Authorization está presente — no hay que cambiar nada en el frontend.
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.DS_Store
-
-# Vercel
-.vercel/
-```
+5. **Variables de entorno nuevas**: agregar JWT_SECRET y JWT_EXPIRES_HOURS al .env de Railway/Render.
