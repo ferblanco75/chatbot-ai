@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal del Proveedor - AsisteCR+</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Sistema de diseño compartido -->
+    <link rel="stylesheet" href="components.css">
+
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           LAYOUT PRINCIPAL - CSS GRID
+           ═══════════════════════════════════════════════════════════════ */
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            grid-template-rows: 1fr;
+            overflow: hidden;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SIDEBAR - 260px, sticky, navy background
+           ═══════════════════════════════════════════════════════════════ */
+        .sidebar {
+            background: var(--navy);
+            color: var(--white);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        /* Brand */
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255,255,255,.1);
+        }
+
+        .sidebar-brand h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--white);
+            margin: 0;
+        }
+
+        .sidebar-brand p {
+            font-size: 12px;
+            color: rgba(255,255,255,.6);
+            margin: 4px 0 0 0;
+        }
+
+        /* User info */
+        .sidebar-user {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--sky), var(--blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--white);
+        }
+
+        .user-info h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--white);
+            margin: 0;
+        }
+
+        .user-info p {
+            font-size: 12px;
+            color: rgba(255,255,255,.5);
+            margin: 2px 0 0 0;
+        }
+
+        /* Navegación */
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+
+        .nav-section-title {
+            padding: 0 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255,255,255,.4);
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: rgba(255,255,255,.7);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,.05);
+            color: var(--white);
+        }
+
+        .nav-item.active {
+            background: rgba(34,120,212,.15);
+            color: var(--white);
+            border-left: 3px solid var(--sky);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--sky);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            opacity: 0.7;
+        }
+
+        .nav-item.active .nav-icon {
+            opacity: 1;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--gold);
+            color: var(--navy);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* Footer de sidebar */
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255,255,255,.1);
+        }
+
+        .btn-logout {
+            width: 100%;
+            padding: 10px 16px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,.2);
+            color: rgba(255,255,255,.7);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,.05);
+            color: var(--white);
+            border-color: rgba(255,255,255,.3);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MAIN AREA - 1fr, overflow-y scroll
+           ═══════════════════════════════════════════════════════════════ */
+        .main-area {
+            overflow-y: auto;
+            height: 100vh;
+            background: var(--gray-1);
+        }
+
+        /* Header de página */
+        .page-header {
+            background: var(--white);
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--gray-2);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 0 0 4px 0;
+        }
+
+        .page-header p {
+            font-size: 14px;
+            color: var(--gray-4);
+            margin: 0;
+        }
+
+        /* Contenido de página */
+        .page-content {
+            padding: 32px;
+        }
+
+        /* Screens individuales - ocultos por defecto */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE - Mobile: sidebar → bottom nav
+           ═══════════════════════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+            body {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .main-area {
+                grid-row: 1;
+            }
+
+            /* Bottom nav para mobile */
+            .bottom-nav {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                background: var(--white);
+                border-top: 1px solid var(--gray-2);
+                position: sticky;
+                bottom: 0;
+                padding: 8px 0;
+            }
+
+            .bottom-nav-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                padding: 8px;
+                color: var(--gray-4);
+                text-decoration: none;
+                font-size: 11px;
+                font-weight: 500;
+            }
+
+            .bottom-nav-item.active {
+                color: var(--sky);
+            }
+
+            .bottom-nav-icon {
+                width: 24px;
+                height: 24px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .bottom-nav {
+                display: none;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           PLACEHOLDER CONTENT (temporal para demo)
+           ═══════════════════════════════════════════════════════════════ */
+        .placeholder-box {
+            background: var(--white);
+            border: 2px dashed var(--gray-2);
+            border-radius: var(--radius);
+            padding: 48px;
+            text-align: center;
+            color: var(--gray-4);
+        }
+
+        .placeholder-box h3 {
+            font-size: 18px;
+            color: var(--navy);
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- ═══════════════════════════════════════════════════════════════
+         SIDEBAR - Navegación principal
+         ═══════════════════════════════════════════════════════════════ -->
+    <aside class="sidebar">
+        <!-- Brand -->
+        <div class="sidebar-brand">
+            <h1>AsisteCR+</h1>
+            <p>Portal del Proveedor</p>
+        </div>
+
+        <!-- User info -->
+        <div class="sidebar-user">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div class="user-info">
+                <h3 id="userName">Cargando...</h3>
+                <p id="userCuit">--</p>
+            </div>
+        </div>
+
+        <!-- Navegación -->
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Principal</div>
+                <a href="#dashboard" class="nav-item active" data-screen="dashboard">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="#legajo" class="nav-item" data-screen="legajo">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                    </svg>
+                    Mi Legajo
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Licitaciones</div>
+                <a href="#licitaciones" class="nav-item" data-screen="licitaciones">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd"/>
+                    </svg>
+                    Licitaciones
+                    <span class="nav-badge">3</span>
+                </a>
+                <a href="#ofertas" class="nav-item" data-screen="ofertas">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    Mis Ofertas
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Herramientas</div>
+                <a href="#normativa" class="nav-item" data-screen="normativa">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                    </svg>
+                    Normativa
+                </a>
+                <a href="#chat" class="nav-item" data-screen="chat">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/>
+                    </svg>
+                    Asistente IA
+                </a>
+                <a href="#notificaciones" class="nav-item" data-screen="notificaciones">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+                    </svg>
+                    Notificaciones
+                </a>
+            </div>
+        </nav>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+            <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         MAIN AREA - Contenido principal
+         ═══════════════════════════════════════════════════════════════ -->
+    <main class="main-area">
+        <!-- SCREEN: Dashboard -->
+        <div id="screen-dashboard" class="screen active">
+            <div class="page-header">
+                <h1>Dashboard</h1>
+                <p>Vista general de tu actividad y licitaciones compatibles</p>
+            </div>
+            <div class="page-content">
+                <div class="placeholder-box">
+                    <h3>Dashboard</h3>
+                    <p>KPIs, licitaciones compatibles, estado de inscripción y alertas</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: Mi Legajo -->
+        <div id="screen-legajo" class="screen">
+            <div class="page-header">
+                <h1>Mi Legajo</h1>
+                <p>Datos de tu empresa, documentación y rubros habilitados</p>
+            </div>
+            <div class="page-content">
+                <div class="placeholder-box">
+                    <h3>Mi Legajo</h3>
+                    <p>Datos empresa, documentación, rubros</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: Licitaciones -->
+        <div id="screen-licitaciones" class="screen">
+            <div class="page-header">
+                <h1>Licitaciones</h1>
+                <p>Todas las licitaciones municipales disponibles</p>
+            </div>
+            <div class="page-content">
+                <div class="placeholder-box">
+                    <h3>Licitaciones</h3>
+                    <p>Tabla filtrable con tag "Para vos" por rubro</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: Mis Ofertas -->
+        <div id="screen-ofertas" class="screen">
+            <div class="page-header">
+                <h1>Mis Ofertas</h1>
+                <p>Historial de tus presentaciones y estados</p>
+            </div>
+            <div class="page-content">
+                <div class="placeholder-box">
+                    <h3>Mis Ofertas</h3>
+                    <p>Historial de presentaciones con estados</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: Normativa -->
+        <div id="screen-normativa" class="screen">
+            <div class="page-header">
+                <h1>Normativa</h1>
+                <p>Marco legal y regulatorio de compras públicas</p>
+            </div>
+            <div class="page-content">
+                <div class="placeholder-box">
+                    <h3>Normativa</h3>
+                    <p>Links a PDFs, CTA al asistente IA</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: Asistente IA -->
+        <div id="screen-chat" class="screen">
+            <div class="page-header">
+                <h1>Asistente IA</h1>
+                <p>Consultá sobre licitaciones, normativa y procesos</p>
+            </div>
+            <div class="page-content">
+                <div class="placeholder-box">
+                    <h3>Asistente IA</h3>
+                    <p>Chat con contexto del proveedor inyectado</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: Notificaciones -->
+        <div id="screen-notificaciones" class="screen">
+            <div class="page-header">
+                <h1>Notificaciones</h1>
+                <p>Historial de alertas y mensajes</p>
+            </div>
+            <div class="page-content">
+                <div class="placeholder-box">
+                    <h3>Notificaciones</h3>
+                    <p>Historial de alertas WhatsApp recibidas</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         BOTTOM NAV - Solo mobile
+         ═══════════════════════════════════════════════════════════════ -->
+    <nav class="bottom-nav">
+        <a href="#dashboard" class="bottom-nav-item active" data-screen="dashboard">
+            <svg class="bottom-nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+            </svg>
+            Inicio
+        </a>
+        <a href="#licitaciones" class="bottom-nav-item" data-screen="licitaciones">
+            <svg class="bottom-nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd"/>
+            </svg>
+            Licitaciones
+        </a>
+        <a href="#chat" class="bottom-nav-item" data-screen="chat">
+            <svg class="bottom-nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/>
+            </svg>
+            Asistente
+        </a>
+        <a href="#legajo" class="bottom-nav-item" data-screen="legajo">
+            <svg class="bottom-nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+            </svg>
+            Perfil
+        </a>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         JAVASCRIPT - SPA Navigation & Auth
+         ═══════════════════════════════════════════════════════════════ -->
+    <script>
+        // ══════════════════════════════════════════════════════════════
+        // AUTH: Verificar JWT al cargar
+        // ══════════════════════════════════════════════════════════════
+        function checkAuth() {
+            const token = sessionStorage.getItem('jwt_token');
+            const proveedor = sessionStorage.getItem('proveedor_data');
+
+            if (!token || !proveedor) {
+                // No hay sesión → redirect a login
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Parsear datos del proveedor
+            try {
+                const data = JSON.parse(proveedor);
+
+                // Actualizar UI con datos del usuario
+                document.getElementById('userName').textContent = data.nombre || 'Proveedor';
+                document.getElementById('userCuit').textContent = data.cuit || '--';
+
+                // Avatar con iniciales
+                const iniciales = (data.nombre || 'P').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                document.getElementById('userAvatar').textContent = iniciales;
+
+            } catch (e) {
+                console.error('Error parseando datos del proveedor:', e);
+                logout();
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // LOGOUT
+        // ══════════════════════════════════════════════════════════════
+        function logout() {
+            sessionStorage.removeItem('jwt_token');
+            sessionStorage.removeItem('proveedor_data');
+            window.location.href = 'index.html';
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // SPA NAVIGATION: Navegación sin reload por hash
+        // ══════════════════════════════════════════════════════════════
+        function navigateToScreen(screenId) {
+            // Ocultar todas las screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+
+            // Mostrar la screen correspondiente
+            const targetScreen = document.getElementById('screen-' + screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+            }
+
+            // Actualizar estados activos en nav items (sidebar)
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.screen === screenId) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Actualizar estados activos en bottom nav (mobile)
+            document.querySelectorAll('.bottom-nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.screen === screenId) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // EVENT LISTENERS
+        // ══════════════════════════════════════════════════════════════
+
+        // Hash change (navegación por URL)
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.substring(1) || 'dashboard';
+            navigateToScreen(hash);
+        });
+
+        // Click en nav items
+        document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const screenId = item.dataset.screen;
+                window.location.hash = screenId;
+            });
+        });
+
+        // ══════════════════════════════════════════════════════════════
+        // INIT
+        // ══════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verificar autenticación
+            checkAuth();
+
+            // Navegar a la screen inicial
+            const initialHash = window.location.hash.substring(1) || 'dashboard';
+            navigateToScreen(initialHash);
+        });
+    </script>
+</body>
+</html>
