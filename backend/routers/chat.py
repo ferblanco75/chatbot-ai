@@ -31,17 +31,23 @@ Si no sabés algo con certeza, referí al contacto oficial. No inventés informa
 
 def _get_licitaciones_context() -> str:
     try:
-        licitaciones = json.loads(DATA_PATH.read_text(encoding="utf-8"))
-        activas = [l for l in licitaciones if l.get("estado") == "activa"]
-        if not activas:
-            return "LICITACIONES: No hay licitaciones activas registradas actualmente."
+        data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
+        # Normalizar estructura: puede venir como {"licitaciones": [...]} o [...]
+        licitaciones = data.get("licitaciones", data) if isinstance(data, dict) else data
+
+        # Buscar licitaciones abiertas (el scraper usa "abierta", no "activa")
+        abiertas = [l for l in licitaciones if l.get("estado") == "abierta"]
+
+        if not abiertas:
+            return "LICITACIONES: No hay licitaciones abiertas registradas actualmente."
+
         items = "\n".join(
-            f"- LP {l['numero']}: {l['titulo']} · Apertura: {l.get('fecha_apertura', 'a confirmar')}"
-            for l in activas[:10]
+            f"- {l.get('numero_expediente', 'S/N')}: {l['titulo']} · Apertura: {l.get('fecha_apertura', 'a confirmar')}"
+            for l in abiertas[:10]
         )
-        return f"LICITACIONES ACTIVAS HOY:\n{items}"
-    except Exception:
-        return "LICITACIONES: Información no disponible en este momento."
+        return f"LICITACIONES ABIERTAS HOY:\n{items}"
+    except Exception as e:
+        return f"LICITACIONES: Información no disponible en este momento."
 
 
 class ChatMessage(BaseModel):
