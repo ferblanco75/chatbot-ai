@@ -94,7 +94,8 @@ async def get_licitaciones(
         # Si se solicita refresh, ejecutar el scraper
         if refresh:
             logger.info("Refrescando licitaciones desde el sitio web")
-            scraped = await scrape_licitaciones()
+            # save_to_file=False porque este endpoint hace su propio merge y guardado
+            scraped = await scrape_licitaciones(save_to_file=False)
 
             # Cargar licitaciones existentes
             existing = load_licitaciones()

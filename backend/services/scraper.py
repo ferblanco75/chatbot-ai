@@ -6,8 +6,10 @@ Implementa retry con backoff exponencial según las convenciones del CLAUDE.md
 """
 
 import asyncio
+import json
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import List, Dict, Optional
 
 import httpx
@@ -18,6 +20,10 @@ logger = logging.getLogger(__name__)
 SCRAPER_URL = "https://www.comodoro.gov.ar/secciones/licitaciones/"
 MAX_RETRIES = 3
 RETRY_BACKOFF = 2  # segundos
+
+# Path al archivo de salida
+DATA_DIR = Path(__file__).parent.parent / "data"
+OUTPUT_FILE = DATA_DIR / "licitaciones.json"
 
 
 async def fetch_with_retry(url: str, retries: int = MAX_RETRIES) -> Optional[str]:
@@ -164,9 +170,43 @@ def parse_licitacion(element) -> Optional[Dict]:
         return None
 
 
-async def scrape_licitaciones() -> List[Dict]:
+def save_licitaciones_to_file(licitaciones: List[Dict]) -> bool:
+    """
+    Guarda las licitaciones en el archivo JSON.
+
+    Args:
+        licitaciones: Lista de licitaciones a guardar
+
+    Returns:
+        True si se guardó exitosamente, False en caso contrario
+    """
+    try:
+        # Crear directorio si no existe
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Guardar con formato legible
+        with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+            json.dump(
+                {"licitaciones": licitaciones},
+                f,
+                ensure_ascii=False,
+                indent=2
+            )
+
+        logger.info(f"✓ Licitaciones guardadas en {OUTPUT_FILE}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error guardando licitaciones en {OUTPUT_FILE}: {e}")
+        return False
+
+
+async def scrape_licitaciones(save_to_file: bool = True) -> List[Dict]:
     """
     Scrape del sitio de licitaciones de la municipalidad.
+
+    Args:
+        save_to_file: Si es True, guarda los resultados en licitaciones.json
 
     Returns:
         Lista de licitaciones encontradas
@@ -205,6 +245,10 @@ async def scrape_licitaciones() -> List[Dict]:
 
         logger.info(f"Se parsearon exitosamente {len(licitaciones)} licitaciones")
 
+        # Guardar en archivo si se solicita
+        if save_to_file and licitaciones:
+            save_licitaciones_to_file(licitaciones)
+
         return licitaciones
 
     except Exception as e:
@@ -219,17 +263,19 @@ async def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
-    licitaciones = await scrape_licitaciones()
+    licitaciones = await scrape_licitaciones(save_to_file=True)
 
     print(f"\n{'='*60}")
     print(f"SCRAPING COMPLETADO: {len(licitaciones)} licitaciones encontradas")
+    print(f"Archivo guardado en: {OUTPUT_FILE}")
     print(f"{'='*60}\n")
 
     for lic in licitaciones:
         print(f"ID: {lic['id']}")
         print(f"Título: {lic['titulo']}")
-        print(f"Fecha apertura: {lic['fecha_apertura']}")
-        print(f"URL pliego: {lic['url_pliego']}")
+        print(f"Estado: {lic['estado']}")
+        print(f"Fecha publicación: {lic['fecha_publicacion']}")
+        print(f"URL: {lic['url_pliego']}")
         print("-" * 60)
 
 
