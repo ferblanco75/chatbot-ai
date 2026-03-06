@@ -313,6 +313,86 @@
             color: var(--navy);
             margin-bottom: 8px;
         }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CHAT CONTAINER
+           ═══════════════════════════════════════════════════════════════ */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: var(--gray-1);
+        }
+
+        .chat-message {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            line-height: 1.5;
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            background: var(--sky);
+            color: white;
+        }
+
+        .chat-message.assistant {
+            align-self: flex-start;
+            background: var(--white);
+            border: 1px solid var(--gray-2);
+            white-space: pre-wrap;
+        }
+
+        .chat-input-wrapper {
+            padding: 20px;
+            background: var(--white);
+            border-top: 1px solid var(--gray-2);
+        }
+
+        .chat-quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        #chatForm {
+            display: flex;
+            gap: 8px;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--gray-2);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+        }
+
+        #chatForm button {
+            padding: 10px 20px;
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        #chatForm button:hover {
+            background: var(--navy);
+        }
     </style>
 </head>
 <body>
@@ -412,10 +492,61 @@
                 <p>Vista general de tu actividad y licitaciones compatibles</p>
             </div>
             <div class="page-content">
-                <div class="placeholder-box">
-                    <h3>Dashboard</h3>
-                    <p>KPIs, licitaciones compatibles, estado de inscripción y alertas</p>
+
+                <!-- KPIs Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 24px;">
+                    <div class="stat-card c-blue">
+                        <div class="stat-icon">📋</div>
+                        <div class="stat-val" id="kpiLicitacionesAbiertas">-</div>
+                        <div class="stat-label">Licitaciones abiertas</div>
+                    </div>
+
+                    <div class="stat-card c-green">
+                        <div class="stat-icon">✓</div>
+                        <div class="stat-val" id="kpiMisOfertas">0</div>
+                        <div class="stat-label">Mis ofertas presentadas</div>
+                    </div>
+
+                    <div class="stat-card c-gold">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-val" id="kpiCompatibles">-</div>
+                        <div class="stat-label">Compatibles con tu rubro</div>
+                    </div>
+
+                    <div class="stat-card c-sky">
+                        <div class="stat-icon">🔔</div>
+                        <div class="stat-val" id="kpiNotificaciones">0</div>
+                        <div class="stat-label">Notificaciones nuevas</div>
+                    </div>
                 </div>
+
+                <!-- Licitaciones destacadas -->
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Licitaciones para vos</h3>
+                        <a href="#licitaciones" class="btn-ghost" style="font-size: 14px; padding: 6px 12px;">Ver todas</a>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <table class="data-table" id="dashboardLicitacionesTable">
+                            <thead>
+                                <tr>
+                                    <th>Expediente</th>
+                                    <th>Título</th>
+                                    <th>Apertura</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" style="text-align: center; padding: 40px; color: var(--gray-4);">
+                                        Cargando licitaciones...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -426,10 +557,56 @@
                 <p>Datos de tu empresa, documentación y rubros habilitados</p>
             </div>
             <div class="page-content">
-                <div class="placeholder-box">
-                    <h3>Mi Legajo</h3>
-                    <p>Datos empresa, documentación, rubros</p>
+
+                <!-- Datos empresa -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Información de la Empresa</h3>
+                        <span class="badge badge-active">Activo</span>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <div>
+                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">CUIT</label>
+                                <div id="legajoCuit" style="font-weight: 500; font-size: 14px;">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">Razón Social</label>
+                                <div id="legajoRazonSocial" style="font-weight: 500; font-size: 14px;">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">Localidad</label>
+                                <div id="legajoLocalidad" style="font-weight: 500; font-size: 14px;">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">Provincia</label>
+                                <div id="legajoProvincia" style="font-weight: 500; font-size: 14px;">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">Rubro</label>
+                                <div id="legajoRubro" style="font-weight: 500; font-size: 14px;">-</div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">WhatsApp</label>
+                                <div id="legajoWhatsapp" style="font-weight: 500; font-size: 14px;">-</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Documentación -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Documentación</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert-banner alert-gold">
+                            <strong>Próximamente:</strong> Carga y gestión de documentación online.
+                        </div>
+                        <p style="color: var(--gray-4); margin-top: 16px; font-size: 14px;">Por ahora, enviá tu documentación a: <strong>controldocumentalyproveedores@comodoro.gov.ar</strong></p>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -440,10 +617,45 @@
                 <p>Todas las licitaciones municipales disponibles</p>
             </div>
             <div class="page-content">
-                <div class="placeholder-box">
-                    <h3>Licitaciones</h3>
-                    <p>Tabla filtrable con tag "Para vos" por rubro</p>
+
+                <!-- Filtros -->
+                <div style="background: var(--white); padding: 16px; border-radius: var(--radius); margin-bottom: 24px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                    <select id="filterEstado" style="padding: 8px 12px; border: 1px solid var(--gray-2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px;">
+                        <option value="">Todos los estados</option>
+                        <option value="abierta">Abiertas</option>
+                        <option value="cerrada">Cerradas</option>
+                    </select>
+
+                    <input type="text" id="filterSearch" placeholder="Buscar por expediente o título..."
+                           style="flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--gray-2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px;">
+
+                    <button onclick="filterLicitaciones()" class="btn-primary" style="padding: 8px 16px; font-size: 14px;">Filtrar</button>
                 </div>
+
+                <!-- Tabla -->
+                <div class="card">
+                    <div class="card-body" style="padding: 0;">
+                        <table class="data-table" id="licitacionesTable">
+                            <thead>
+                                <tr>
+                                    <th>Expediente</th>
+                                    <th>Título</th>
+                                    <th>Fecha Apertura</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--gray-4);">
+                                        Cargando licitaciones...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -454,10 +666,33 @@
                 <p>Historial de tus presentaciones y estados</p>
             </div>
             <div class="page-content">
-                <div class="placeholder-box">
-                    <h3>Mis Ofertas</h3>
-                    <p>Historial de presentaciones con estados</p>
+
+                <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
+                    <strong>Módulo en desarrollo:</strong> Próximamente podrás presentar ofertas online.
                 </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Expediente</th>
+                                    <th>Fecha Presentación</th>
+                                    <th>Monto Ofertado</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--gray-4); padding: 40px;">
+                                        No tenés ofertas registradas aún.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -468,10 +703,72 @@
                 <p>Marco legal y regulatorio de compras públicas</p>
             </div>
             <div class="page-content">
-                <div class="placeholder-box">
-                    <h3>Normativa</h3>
-                    <p>Links a PDFs, CTA al asistente IA</p>
+
+                <!-- CTA al asistente -->
+                <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
+                    <strong>¿Tenés dudas sobre normativa?</strong>
+                    <a href="#chat" style="color: var(--blue); text-decoration: underline; margin-left: 8px;">
+                        Consultá con el Asistente IA
+                    </a>
                 </div>
+
+                <!-- Grid de documentos -->
+                <div style="display: grid; gap: 16px;">
+
+                    <div class="card">
+                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                            <div>
+                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Ley II N°76 - Contrataciones del Estado Provincial</h3>
+                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Legislación Chubut</p>
+                            </div>
+                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                            <div>
+                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Ley N°4829 - Compre Chubut</h3>
+                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Preferencia proveedores locales</p>
+                            </div>
+                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                            <div>
+                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Pliego de Bases y Condiciones Generales (PBCG)</h3>
+                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Condiciones generales de licitación</p>
+                            </div>
+                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                            <div>
+                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Guía de Inscripción de Proveedores</h3>
+                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Requisitos y documentación</p>
+                            </div>
+                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Contacto -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3>Contacto Oficial</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Email:</strong> licitacionesyconcursos@comodoro.gov.ar</p>
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Dirección:</strong> Namuncurá 26, Comodoro Rivadavia</p>
+                        <p style="margin: 0; font-size: 14px;"><strong>Horario:</strong> Lunes a viernes, hasta 12:00 hs del día anterior a apertura</p>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -481,10 +778,18 @@
                 <h1>Asistente IA</h1>
                 <p>Consultá sobre licitaciones, normativa y procesos</p>
             </div>
-            <div class="page-content">
-                <div class="placeholder-box">
-                    <h3>Asistente IA</h3>
-                    <p>Chat con contexto del proveedor inyectado</p>
+            <div class="page-content chat-container" style="padding: 0;">
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-wrapper">
+                    <div class="chat-quick-actions">
+                        <button class="chip">¿Qué licitaciones hay abiertas?</button>
+                        <button class="chip">¿Cómo me inscribo como proveedor?</button>
+                        <button class="chip">Requisitos para presentar oferta</button>
+                    </div>
+                    <form id="chatForm">
+                        <input type="text" id="chatInput" placeholder="Escribí tu consulta..." autocomplete="off">
+                        <button type="submit">Enviar</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -496,10 +801,17 @@
                 <p>Historial de alertas y mensajes</p>
             </div>
             <div class="page-content">
-                <div class="placeholder-box">
-                    <h3>Notificaciones</h3>
-                    <p>Historial de alertas WhatsApp recibidas</p>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div style="text-align: center; padding: 60px 40px; color: var(--gray-4);">
+                            <div style="font-size: 64px; margin-bottom: 16px;">🔔</div>
+                            <h3 style="font-size: 18px; margin-bottom: 8px; color: var(--navy);">No tenés notificaciones nuevas</h3>
+                            <p style="font-size: 14px; margin: 0;">Cuando haya novedades, las verás acá.</p>
+                        </div>
+                    </div>
                 </div>
+
             </div>
         </div>
     </main>
@@ -539,6 +851,11 @@
          JAVASCRIPT - SPA Navigation & Auth
          ═══════════════════════════════════════════════════════════════ -->
     <script>
+        // ══════════════════════════════════════════════════════════════
+        // CONFIG: API URL
+        // ══════════════════════════════════════════════════════════════
+        const API_URL = 'http://localhost:8000'; // Cambiar en producción
+
         // ══════════════════════════════════════════════════════════════
         // AUTH: Verificar JWT al cargar
         // ══════════════════════════════════════════════════════════════
@@ -580,6 +897,238 @@
         }
 
         // ══════════════════════════════════════════════════════════════
+        // DATA LOADING: Dashboard
+        // ══════════════════════════════════════════════════════════════
+        async function loadDashboard() {
+            const token = sessionStorage.getItem('jwt_token');
+
+            try {
+                const res = await fetch(`${API_URL}/licitaciones`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await res.json();
+                const licitaciones = data.licitaciones || data;
+
+                // Filtrar abiertas
+                const abiertas = licitaciones.filter(l => l.estado === 'abierta');
+
+                // Actualizar KPIs
+                document.getElementById('kpiLicitacionesAbiertas').textContent = abiertas.length;
+                document.getElementById('kpiCompatibles').textContent = abiertas.length;
+
+                // Llenar tabla de licitaciones destacadas (top 5)
+                const tbody = document.querySelector('#dashboardLicitacionesTable tbody');
+                tbody.innerHTML = '';
+
+                if (abiertas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--gray-4);">No hay licitaciones abiertas actualmente.</td></tr>';
+                } else {
+                    abiertas.slice(0, 5).forEach(lic => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${lic.numero_expediente || 'S/N'}</strong></td>
+                            <td>${lic.titulo}</td>
+                            <td>${lic.fecha_apertura || 'A confirmar'}</td>
+                            <td><span class="badge badge-open">Abierta</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error cargando dashboard:', error);
+                document.querySelector('#dashboardLicitacionesTable tbody').innerHTML =
+                    '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--red);">Error cargando licitaciones</td></tr>';
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // DATA LOADING: Mi Legajo
+        // ══════════════════════════════════════════════════════════════
+        async function loadLegajo() {
+            const token = sessionStorage.getItem('jwt_token');
+
+            try {
+                const res = await fetch(`${API_URL}/proveedores/me`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const proveedor = await res.json();
+
+                document.getElementById('legajoCuit').textContent = proveedor.cuit || '-';
+                document.getElementById('legajoRazonSocial').textContent = proveedor.razon_social || '-';
+                document.getElementById('legajoLocalidad').textContent = proveedor.localidad || 'No especificado';
+                document.getElementById('legajoProvincia').textContent = proveedor.provincia || 'No especificado';
+                document.getElementById('legajoRubro').textContent = proveedor.rubro || 'No especificado';
+                document.getElementById('legajoWhatsapp').textContent = proveedor.whatsapp || 'No especificado';
+
+            } catch (error) {
+                console.error('Error cargando legajo:', error);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // DATA LOADING: Licitaciones
+        // ══════════════════════════════════════════════════════════════
+        let allLicitaciones = [];
+
+        async function loadLicitaciones() {
+            const token = sessionStorage.getItem('jwt_token');
+
+            try {
+                const res = await fetch(`${API_URL}/licitaciones`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await res.json();
+                allLicitaciones = data.licitaciones || data;
+
+                renderLicitaciones(allLicitaciones);
+
+            } catch (error) {
+                console.error('Error cargando licitaciones:', error);
+                document.querySelector('#licitacionesTable tbody').innerHTML =
+                    '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--red);">Error cargando licitaciones</td></tr>';
+            }
+        }
+
+        function renderLicitaciones(licitaciones) {
+            const tbody = document.querySelector('#licitacionesTable tbody');
+            tbody.innerHTML = '';
+
+            if (licitaciones.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--gray-4);">No se encontraron licitaciones.</td></tr>';
+                return;
+            }
+
+            licitaciones.forEach(lic => {
+                const tr = document.createElement('tr');
+
+                const estadoBadge = lic.estado === 'abierta'
+                    ? '<span class="badge badge-open">Abierta</span>'
+                    : '<span class="badge badge-closed">Cerrada</span>';
+
+                tr.innerHTML = `
+                    <td><strong>${lic.numero_expediente || 'S/N'}</strong></td>
+                    <td>${lic.titulo}</td>
+                    <td>${lic.fecha_apertura || 'A confirmar'}</td>
+                    <td>${estadoBadge}</td>
+                    <td>
+                        ${lic.url_pliego ? `<a href="${lic.url_pliego}" target="_blank" class="btn-ghost" style="font-size: 12px; padding: 4px 8px;">Ver pliego</a>` : '-'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterLicitaciones() {
+            const estado = document.getElementById('filterEstado').value;
+            const search = document.getElementById('filterSearch').value.toLowerCase();
+
+            let filtered = allLicitaciones;
+
+            if (estado) {
+                filtered = filtered.filter(l => l.estado === estado);
+            }
+
+            if (search) {
+                filtered = filtered.filter(l =>
+                    (l.numero_expediente && l.numero_expediente.toLowerCase().includes(search)) ||
+                    (l.titulo && l.titulo.toLowerCase().includes(search))
+                );
+            }
+
+            renderLicitaciones(filtered);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // CHAT FUNCTIONALITY
+        // ══════════════════════════════════════════════════════════════
+        let chatHistory = [];
+
+        function appendMessage(role, content) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${role}`;
+            msgDiv.textContent = content;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            return msgDiv;
+        }
+
+        async function sendMessage(userMessage) {
+            if (!userMessage.trim()) return;
+
+            // Añadir mensaje del usuario
+            appendMessage('user', userMessage);
+            chatHistory.push({role: 'user', content: userMessage});
+
+            // Obtener JWT del sessionStorage
+            const token = sessionStorage.getItem('jwt_token');
+
+            // Headers con JWT opcional
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            try {
+                // Llamada al endpoint con SSE
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({messages: chatHistory})
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}`);
+                }
+
+                // Crear mensaje del asistente vacío
+                const assistantDiv = appendMessage('assistant', '');
+                let assistantMessage = '';
+
+                // Leer stream
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.content) {
+                                    assistantMessage += parsed.content;
+                                    assistantDiv.textContent = assistantMessage;
+                                    // Auto-scroll
+                                    assistantDiv.scrollIntoView({behavior: 'smooth', block: 'end'});
+                                }
+                            } catch (e) {
+                                // Ignorar líneas mal formadas
+                            }
+                        }
+                    }
+                }
+
+                // Guardar en historial
+                chatHistory.push({role: 'assistant', content: assistantMessage});
+
+            } catch (error) {
+                console.error('Error en chat:', error);
+                appendMessage('assistant', 'Lo siento, hubo un error al procesar tu mensaje. Intentá de nuevo.');
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // SPA NAVIGATION: Navegación sin reload por hash
         // ══════════════════════════════════════════════════════════════
         function navigateToScreen(screenId) {
@@ -609,6 +1158,20 @@
                     item.classList.add('active');
                 }
             });
+
+            // Cargar datos según la screen
+            switch(screenId) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'legajo':
+                    loadLegajo();
+                    break;
+                case 'licitaciones':
+                    loadLicitaciones();
+                    break;
+                // chat, ofertas, normativa, notificaciones son estáticas por ahora
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -640,6 +1203,24 @@
             // Navegar a la screen inicial
             const initialHash = window.location.hash.substring(1) || 'dashboard';
             navigateToScreen(initialHash);
+
+            // Event listeners para el chat
+            document.getElementById('chatForm')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('chatInput');
+                const message = input.value.trim();
+                if (message) {
+                    sendMessage(message);
+                    input.value = '';
+                }
+            });
+
+            // Quick actions
+            document.querySelectorAll('.chat-quick-actions .chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    sendMessage(chip.textContent);
+                });
+            });
         });
     </script>
 </body>

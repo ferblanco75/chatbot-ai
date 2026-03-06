@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel, Field
 
 from services.auth_service import (
@@ -24,6 +24,7 @@ from services.auth_service import (
     verify_otp
 )
 from services.whatsapp import send_whatsapp_message
+from middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +142,8 @@ def find_proveedor(cuit: str) -> Optional[dict]:
 # ══════════════════════════════════════════════════════════════
 
 @router.post("/request-code", status_code=status.HTTP_200_OK)
-async def request_code(request: RequestCodeRequest):
+@limiter.limit("3/minute")  # Máximo 3 solicitudes por minuto
+async def request_code(http_request: Request, request: RequestCodeRequest):
     """
     Solicita un código OTP enviado por WhatsApp.
 
@@ -208,7 +210,8 @@ _Municipalidad de Comodoro Rivadavia_"""
 
 
 @router.post("/verify", status_code=status.HTTP_200_OK, response_model=AuthResponse)
-async def verify_code(request: VerifyCodeRequest):
+@limiter.limit("5/minute")  # Máximo 5 intentos de verificación por minuto
+async def verify_code(http_request: Request, request: VerifyCodeRequest):
     """
     Verifica el código OTP y retorna un JWT.
 

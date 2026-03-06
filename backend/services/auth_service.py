@@ -3,7 +3,7 @@ Servicio de autenticación con OTP y JWT.
 
 Implementa:
 - Generación de códigos OTP aleatorios de 6 caracteres
-- Almacenamiento en memoria con TTL de 30 minutos
+- Almacenamiento con Redis (producción) o memoria (desarrollo)
 - Generación y firma de JWT con expiración de 8 horas
 - Validación de códigos OTP y tokens JWT
 """
@@ -20,11 +20,35 @@ from jwt.exceptions import InvalidTokenError
 
 logger = logging.getLogger(__name__)
 
-# Almacenamiento en memoria de códigos OTP
-# Estructura: {cuit: {"code": "ABC123", "expires_at": datetime}}
-# En producción esto debería ser Redis
-_otp_storage: Dict[str, Dict] = {}
+# ══════════════════════════════════════════════════════════════
+# STORAGE BACKEND SELECTION
+# ══════════════════════════════════════════════════════════════
 
+REDIS_URL = os.getenv("REDIS_URL")
+
+if REDIS_URL:
+    # Producción: usar Redis
+    try:
+        import redis
+        _redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+        # Verificar conexión
+        _redis_client.ping()
+        logger.info("OTP storage: Redis configurado y conectado")
+        USE_REDIS = True
+    except Exception as e:
+        logger.warning(f"Redis configurado pero no disponible ({e}), usando memoria")
+        _otp_storage: Dict[str, Dict] = {}
+        USE_REDIS = False
+else:
+    # Desarrollo: usar memoria
+    _otp_storage: Dict[str, Dict] = {}
+    logger.warning("OTP storage: usando memoria (solo para desarrollo)")
+    USE_REDIS = False
+
+
+# ══════════════════════════════════════════════════════════════
+# OTP FUNCTIONS
+# ══════════════════════════════════════════════════════════════
 
 def generate_otp(length: int = 6) -> str:
     """
@@ -46,26 +70,37 @@ def generate_otp(length: int = 6) -> str:
 
 def store_otp(cuit: str, otp: str, ttl_minutes: int = 30) -> None:
     """
-    Almacena un código OTP en memoria con TTL.
+    Almacena un código OTP con TTL.
+
+    En Redis: usa TTL automático con SETEX
+    En memoria: guarda expires_at manualmente
 
     Args:
         cuit: CUIT del proveedor
         otp: Código OTP a almacenar
         ttl_minutes: Tiempo de vida en minutos (por defecto 30)
     """
-    expires_at = datetime.now() + timedelta(minutes=ttl_minutes)
-
-    _otp_storage[cuit] = {
-        "code": otp,
-        "expires_at": expires_at
-    }
-
-    logger.info(f"OTP almacenado para CUIT {cuit}, expira a las {expires_at.strftime('%H:%M:%S')}")
+    if USE_REDIS:
+        # Redis: SETEX con TTL automático
+        key = f"otp:{cuit}"
+        _redis_client.setex(key, ttl_minutes * 60, otp)
+        logger.info(f"OTP almacenado en Redis para CUIT {cuit}, TTL {ttl_minutes}min")
+    else:
+        # Memoria: guardar con expires_at
+        expires_at = datetime.now() + timedelta(minutes=ttl_minutes)
+        _otp_storage[cuit] = {
+            "code": otp,
+            "expires_at": expires_at
+        }
+        logger.info(f"OTP almacenado en memoria para CUIT {cuit}, expira {expires_at.strftime('%H:%M:%S')}")
 
 
 def verify_otp(cuit: str, otp: str) -> bool:
     """
-    Verifica si un código OTP es válido y no ha expirado.
+    Verifica si un código OTP es válido.
+
+    En Redis: GET key, luego DEL para evitar reutilización
+    En memoria: verificar expires_at, luego DEL
 
     Args:
         cuit: CUIT del proveedor
@@ -74,52 +109,112 @@ def verify_otp(cuit: str, otp: str) -> bool:
     Returns:
         True si el código es válido, False en caso contrario
     """
-    if cuit not in _otp_storage:
-        logger.warning(f"No hay OTP almacenado para CUIT {cuit}")
-        return False
+    if USE_REDIS:
+        key = f"otp:{cuit}"
+        stored_otp = _redis_client.get(key)
 
-    stored_data = _otp_storage[cuit]
+        if not stored_otp:
+            logger.warning(f"No hay OTP en Redis para CUIT {cuit}")
+            return False
 
-    # Verificar expiración
-    if datetime.now() > stored_data["expires_at"]:
-        logger.warning(f"OTP expirado para CUIT {cuit}")
-        # Limpiar código expirado
+        if stored_otp != otp.upper():
+            logger.warning(f"Código OTP inválido para CUIT {cuit}")
+            return False
+
+        # Código válido → eliminar para evitar reutilización
+        _redis_client.delete(key)
+        logger.info(f"OTP verificado exitosamente para CUIT {cuit}")
+        return True
+
+    else:
+        # Memoria: verificar manualmente
+        if cuit not in _otp_storage:
+            logger.warning(f"No hay OTP en memoria para CUIT {cuit}")
+            return False
+
+        stored_data = _otp_storage[cuit]
+
+        # Verificar expiración
+        if datetime.now() > stored_data["expires_at"]:
+            logger.warning(f"OTP expirado para CUIT {cuit}")
+            del _otp_storage[cuit]
+            return False
+
+        # Verificar código
+        if stored_data["code"] != otp.upper():
+            logger.warning(f"Código OTP inválido para CUIT {cuit}")
+            return False
+
+        # Código válido → eliminar
         del _otp_storage[cuit]
-        return False
-
-    # Verificar código
-    if stored_data["code"] != otp.upper():
-        logger.warning(f"Código OTP inválido para CUIT {cuit}")
-        return False
-
-    # Código válido → eliminar para evitar reutilización
-    del _otp_storage[cuit]
-    logger.info(f"OTP verificado exitosamente para CUIT {cuit}")
-
-    return True
+        logger.info(f"OTP verificado exitosamente para CUIT {cuit}")
+        return True
 
 
 def cleanup_expired_otps() -> int:
     """
-    Limpia códigos OTP expirados del almacenamiento.
+    Limpia códigos OTP expirados.
+
+    En Redis: no es necesario (TTL automático)
+    En memoria: manual cleanup
 
     Returns:
         Cantidad de códigos eliminados
     """
-    now = datetime.now()
-    expired_cuits = [
-        cuit for cuit, data in _otp_storage.items()
-        if now > data["expires_at"]
-    ]
+    if USE_REDIS:
+        # Redis maneja TTL automáticamente
+        return 0
 
-    for cuit in expired_cuits:
-        del _otp_storage[cuit]
+    else:
+        # Memoria: cleanup manual
+        now = datetime.now()
+        expired_cuits = [
+            cuit for cuit, data in _otp_storage.items()
+            if now > data["expires_at"]
+        ]
 
-    if expired_cuits:
-        logger.info(f"Limpiados {len(expired_cuits)} OTPs expirados")
+        for cuit in expired_cuits:
+            del _otp_storage[cuit]
 
-    return len(expired_cuits)
+        if expired_cuits:
+            logger.info(f"Limpiados {len(expired_cuits)} OTPs expirados")
 
+        return len(expired_cuits)
+
+
+def get_otp_storage_stats() -> Dict:
+    """
+    Retorna estadísticas del almacenamiento de OTPs.
+
+    Returns:
+        Dict con backend usado y cantidad de OTPs almacenados
+    """
+    if USE_REDIS:
+        # Redis: contar keys con patrón otp:*
+        keys = _redis_client.keys("otp:*")
+        return {
+            "backend": "redis",
+            "total_stored": len(keys),
+            "expired": 0,  # Redis maneja automáticamente
+            "active": len(keys)
+        }
+    else:
+        # Memoria: contar manualmente
+        total = len(_otp_storage)
+        now = datetime.now()
+        expired = sum(1 for data in _otp_storage.values() if now > data["expires_at"])
+
+        return {
+            "backend": "memory",
+            "total_stored": total,
+            "expired": expired,
+            "active": total - expired
+        }
+
+
+# ══════════════════════════════════════════════════════════════
+# JWT FUNCTIONS
+# ══════════════════════════════════════════════════════════════
 
 def create_jwt_token(
     cuit: str,
@@ -238,22 +333,3 @@ def extract_bearer_token(authorization_header: str) -> Optional[str]:
         return None
 
     return parts[1]
-
-
-# Cleanup automático en background (ejecutar periódicamente)
-def get_otp_storage_stats() -> Dict:
-    """
-    Retorna estadísticas del almacenamiento de OTPs.
-
-    Returns:
-        Dict con cantidad total y cantidad expirada
-    """
-    total = len(_otp_storage)
-    now = datetime.now()
-    expired = sum(1 for data in _otp_storage.values() if now > data["expires_at"])
-
-    return {
-        "total_stored": total,
-        "expired": expired,
-        "active": total - expired
-    }
