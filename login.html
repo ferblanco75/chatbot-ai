@@ -339,6 +339,80 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
+           ANIMACIÓN SHAKE PARA ERRORES
+           ═══════════════════════════════════════════════════════════════ */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+            20%, 40%, 60%, 80% { transform: translateX(6px); }
+        }
+
+        .shake {
+            animation: shake 0.4s ease;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           OTP INPUTS - 6 inputs individuales con auto-avance
+           ═══════════════════════════════════════════════════════════════ */
+        .otp-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .otp-digit {
+            width: 100%;
+            aspect-ratio: 1;
+            padding: 0;
+            border: 2px solid var(--gray-2);
+            border-radius: var(--radius);
+            font-family: 'Syne', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            color: var(--navy);
+            text-transform: uppercase;
+            transition: all 0.2s;
+            background: var(--white);
+        }
+
+        .otp-digit:focus {
+            outline: none;
+            border-color: var(--sky);
+            box-shadow: 0 0 0 3px rgba(34,120,212,.1);
+        }
+
+        .otp-digit.filled {
+            border-color: var(--green);
+            background: var(--green-l);
+        }
+
+        .otp-digit.error {
+            border-color: var(--red);
+            background: #FDEAEC;
+        }
+
+        /* Timer de expiración OTP */
+        .expiration-timer {
+            text-align: center;
+            font-size: 13px;
+            color: var(--gray-4);
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        .expiration-timer.warning {
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        .expiration-timer.expired {
+            color: var(--red);
+            font-weight: 600;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
            RESPONSIVE
            ═══════════════════════════════════════════════════════════════ */
         @media (max-width: 480px) {
@@ -348,6 +422,10 @@
 
             .login-brand .brand-name {
                 font-size: 26px;
+            }
+
+            .otp-digit {
+                font-size: 20px;
             }
         }
     </style>
@@ -426,20 +504,22 @@
 
                 <form id="form-verify-code" onsubmit="return false;">
                     <div class="form-group">
-                        <label class="form-label" for="input-otp">Código OTP</label>
-                        <input
-                            type="text"
-                            id="input-otp"
-                            class="form-input otp-input"
-                            placeholder="K7M2N9"
-                            maxlength="6"
-                            required
-                            autocomplete="off"
-                        >
-                        <div class="form-hint">Ingresá el código que recibiste por WhatsApp</div>
+                        <label class="form-label">Código OTP</label>
+                        <div class="otp-grid" id="otp-grid">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="0" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="1" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="2" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="3" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="4" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="5" autocomplete="off">
+                        </div>
+                        <div class="form-hint">Ingresá el código de 6 caracteres que recibiste por WhatsApp</div>
                     </div>
 
-                    <button type="submit" id="btn-verify" class="btn-submit">
+                    <!-- Timer de expiración -->
+                    <div id="expiration-timer" class="expiration-timer"></div>
+
+                    <button type="submit" id="btn-verify" class="btn-submit" disabled>
                         Verificar e ingresar
                     </button>
 
@@ -479,11 +559,13 @@
         // ══════════════════════════════════════════════════════════════
         // CONFIGURACIÓN
         // ══════════════════════════════════════════════════════════════
-        const API_URL = 'https://chatbot-ai-o0qw.onrender.com'; // Cambiar en producción
+        const API_URL = 'http://localhost:8000'; // Cambiar en producción
 
         // Estado global
         let currentCuit = '';
         let resendTimer = null;
+        let expirationTimer = null;
+        let otpExpirationTime = null;
         let resendCountdown = 60; // segundos hasta poder reenviar
 
         // ══════════════════════════════════════════════════════════════
@@ -523,6 +605,25 @@
             return cuit.replace(/[-\s]/g, '').trim();
         }
 
+        function formatCuit(value) {
+            // Remover todo excepto números
+            const numbers = value.replace(/\D/g, '');
+
+            // Aplicar formato XX-XXXXXXXX-X
+            if (numbers.length <= 2) {
+                return numbers;
+            } else if (numbers.length <= 10) {
+                return `${numbers.slice(0, 2)}-${numbers.slice(2)}`;
+            } else {
+                return `${numbers.slice(0, 2)}-${numbers.slice(2, 10)}-${numbers.slice(10, 11)}`;
+            }
+        }
+
+        function isValidCuit(cuit) {
+            const numbers = cuit.replace(/\D/g, '');
+            return numbers.length === 11;
+        }
+
         // ══════════════════════════════════════════════════════════════
         // TIMER DE REENVÍO
         // ══════════════════════════════════════════════════════════════
@@ -543,6 +644,171 @@
                     timerEl.textContent = '';
                 }
             }, 1000);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // TIMER DE EXPIRACIÓN OTP (30 minutos)
+        // ══════════════════════════════════════════════════════════════
+        function startExpirationTimer() {
+            // Calcular tiempo de expiración (30 minutos desde ahora)
+            otpExpirationTime = Date.now() + (30 * 60 * 1000);
+
+            const timerEl = document.getElementById('expiration-timer');
+
+            function updateTimer() {
+                const now = Date.now();
+                const remaining = otpExpirationTime - now;
+
+                if (remaining <= 0) {
+                    // Código expirado
+                    clearInterval(expirationTimer);
+                    timerEl.innerHTML = '⏰ El código ha expirado';
+                    timerEl.className = 'expiration-timer expired';
+
+                    // Deshabilitar verificación
+                    document.getElementById('btn-verify').disabled = true;
+
+                    // Mostrar alerta
+                    showAlert('alert-verify', 'El código ha expirado. Solicitá uno nuevo.');
+                    return;
+                }
+
+                // Calcular minutos y segundos
+                const minutes = Math.floor(remaining / 60000);
+                const seconds = Math.floor((remaining % 60000) / 1000);
+
+                // Formatear display
+                const display = `Expira en ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                timerEl.textContent = display;
+
+                // Cambiar color si quedan menos de 5 minutos
+                if (minutes < 5) {
+                    timerEl.className = 'expiration-timer warning';
+                } else {
+                    timerEl.className = 'expiration-timer';
+                }
+            }
+
+            // Actualizar inmediatamente y luego cada segundo
+            updateTimer();
+            expirationTimer = setInterval(updateTimer, 1000);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // OTP INPUTS - Auto-avance, auto-paste, validación
+        // ══════════════════════════════════════════════════════════════
+        function setupOTPInputs() {
+            const otpInputs = document.querySelectorAll('.otp-digit');
+
+            otpInputs.forEach((input, index) => {
+                // Auto-avance al escribir
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value.toUpperCase();
+                    e.target.value = value;
+
+                    // Remover estado de error
+                    e.target.classList.remove('error');
+
+                    if (value.length === 1) {
+                        input.classList.add('filled');
+
+                        // Avanzar al siguiente input
+                        if (index < otpInputs.length - 1) {
+                            otpInputs[index + 1].focus();
+                        }
+                    } else {
+                        input.classList.remove('filled');
+                    }
+
+                    // Verificar si todos los inputs están llenos
+                    checkOTPComplete();
+                });
+
+                // Backspace: volver al input anterior
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace') {
+                        e.target.value = '';
+                        e.target.classList.remove('filled', 'error');
+
+                        if (index > 0) {
+                            otpInputs[index - 1].focus();
+                        }
+
+                        checkOTPComplete();
+                    }
+                });
+
+                // Auto-paste: detectar pegado de código completo
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text').toUpperCase().replace(/\s/g, '');
+
+                    if (pastedData.length >= 6) {
+                        // Distribuir cada carácter en su input
+                        otpInputs.forEach((otpInput, i) => {
+                            otpInput.value = pastedData[i] || '';
+                            if (pastedData[i]) {
+                                otpInput.classList.add('filled');
+                                otpInput.classList.remove('error');
+                            }
+                        });
+
+                        // Focus en el último input
+                        otpInputs[5].focus();
+
+                        // Verificar completitud
+                        checkOTPComplete();
+                    }
+                });
+
+                // Enter: submit si está completo
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const btnVerify = document.getElementById('btn-verify');
+                        if (!btnVerify.disabled) {
+                            document.getElementById('form-verify-code').dispatchEvent(new Event('submit'));
+                        }
+                    }
+                });
+            });
+        }
+
+        function checkOTPComplete() {
+            const code = getOTPCode();
+            const btnVerify = document.getElementById('btn-verify');
+            btnVerify.disabled = code.length !== 6;
+        }
+
+        function getOTPCode() {
+            const otpInputs = document.querySelectorAll('.otp-digit');
+            return Array.from(otpInputs).map(input => input.value).join('');
+        }
+
+        function clearOTPInputs() {
+            const otpInputs = document.querySelectorAll('.otp-digit');
+            otpInputs.forEach(input => {
+                input.value = '';
+                input.classList.remove('filled', 'error');
+            });
+            document.getElementById('btn-verify').disabled = true;
+        }
+
+        function shakeOTPInputs() {
+            const otpInputs = document.querySelectorAll('.otp-digit');
+            const otpGrid = document.getElementById('otp-grid');
+
+            // Agregar clase error y shake a todos los inputs
+            otpInputs.forEach(input => {
+                input.classList.add('error');
+            });
+
+            // Shake al contenedor
+            otpGrid.classList.add('shake');
+
+            // Remover shake después de la animación
+            setTimeout(() => {
+                otpGrid.classList.remove('shake');
+            }, 400);
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -596,7 +862,16 @@
                 // Éxito: mostrar pantalla de verificación
                 document.getElementById('whatsapp-masked').textContent = data.whatsapp || '****';
                 showScreen('verify');
+
+                // Inicializar inputs OTP
+                setupOTPInputs();
+
+                // Focus en primer input
+                document.querySelector('.otp-digit').focus();
+
+                // Iniciar timers
                 startResendTimer();
+                startExpirationTimer();
 
             } catch (error) {
                 console.error('Error requesting OTP:', error);
@@ -612,19 +887,17 @@
         document.getElementById('form-verify-code').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const otpInput = document.getElementById('input-otp');
-            const otp = otpInput.value.trim().toUpperCase();
+            const otp = getOTPCode();
 
             // Validación básica
             if (!otp || otp.length !== 6) {
                 showAlert('alert-verify', 'El código debe tener 6 caracteres.');
-                otpInput.classList.add('error');
+                shakeOTPInputs();
                 return;
             }
 
             // Limpiar errores previos
             hideAlert('alert-verify');
-            otpInput.classList.remove('error');
 
             // Llamar al backend
             setLoading('btn-verify', true);
@@ -662,9 +935,18 @@
             } catch (error) {
                 console.error('Error verifying OTP:', error);
                 showAlert('alert-verify', error.message || 'Código inválido o expirado. Intentá nuevamente.');
-                otpInput.classList.add('error');
-                otpInput.value = '';
-                otpInput.focus();
+
+                // Shake animation
+                shakeOTPInputs();
+
+                // Limpiar inputs
+                clearOTPInputs();
+
+                // Focus en primer input
+                setTimeout(() => {
+                    document.querySelector('.otp-digit').focus();
+                }, 400);
+
             } finally {
                 setLoading('btn-verify', false);
             }
@@ -675,13 +957,16 @@
         // ══════════════════════════════════════════════════════════════
         document.getElementById('btn-back').addEventListener('click', () => {
             // Limpiar formularios y alertas
-            document.getElementById('input-otp').value = '';
+            clearOTPInputs();
             hideAlert('alert-verify');
             hideAlert('alert-sent');
 
-            // Detener timer de reenvío
+            // Detener timers
             if (resendTimer) {
                 clearInterval(resendTimer);
+            }
+            if (expirationTimer) {
+                clearInterval(expirationTimer);
             }
 
             // Volver a pantalla 1
@@ -714,8 +999,18 @@
                 hideAlert('alert-verify');
                 showAlert('alert-sent', 'Código reenviado exitosamente.');
 
-                // Reiniciar timer
+                // Limpiar inputs OTP
+                clearOTPInputs();
+
+                // Focus en primer input
+                document.querySelector('.otp-digit').focus();
+
+                // Reiniciar timers (reenvío y expiración)
+                if (resendTimer) clearInterval(resendTimer);
+                if (expirationTimer) clearInterval(expirationTimer);
+
                 startResendTimer();
+                startExpirationTimer();
 
             } catch (error) {
                 console.error('Error resending OTP:', error);
@@ -725,21 +1020,15 @@
         });
 
         // ══════════════════════════════════════════════════════════════
-        // FORMATEO AUTOMÁTICO DE CUIT (opcional)
+        // FORMATEO AUTOMÁTICO DE CUIT
         // ══════════════════════════════════════════════════════════════
         document.getElementById('input-cuit').addEventListener('input', (e) => {
+            // Auto-formatear CUIT con guiones
+            e.target.value = formatCuit(e.target.value);
+
             // Remover clases de error al escribir
             e.target.classList.remove('error');
             hideAlert('alert-request');
-        });
-
-        document.getElementById('input-otp').addEventListener('input', (e) => {
-            // Convertir a mayúsculas automáticamente
-            e.target.value = e.target.value.toUpperCase();
-
-            // Remover clases de error al escribir
-            e.target.classList.remove('error');
-            hideAlert('alert-verify');
         });
 
         // ══════════════════════════════════════════════════════════════
