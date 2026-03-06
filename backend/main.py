@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import licitaciones, proveedores, notificaciones, chat
+from routers import licitaciones, proveedores, notificaciones, chat, auth
 
 # Cargar variables de entorno
 load_dotenv()
@@ -51,6 +51,7 @@ app.add_middleware(
 )
 
 # Montar routers
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(licitaciones.router, prefix="/licitaciones", tags=["licitaciones"])
 app.include_router(proveedores.router, prefix="/proveedores", tags=["proveedores"])
 app.include_router(notificaciones.router, prefix="/notificaciones", tags=["notificaciones"])

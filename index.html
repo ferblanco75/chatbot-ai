@@ -48,6 +48,7 @@
             text-align: center;
             border-radius: 8px;
             margin-bottom: 40px;
+            position: relative;
         }
 
         .header h1 {
@@ -60,6 +61,37 @@
             font-size: 1.2rem;
             font-weight: 400;
             opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        /* Botón acceso proveedores */
+        .btn-proveedor {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--dorado);
+            color: var(--azul-marino);
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(232, 160, 0, 0.3);
+            margin-top: 10px;
+        }
+
+        .btn-proveedor:hover {
+            background: #F5B420;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(232, 160, 0, 0.4);
+        }
+
+        .btn-proveedor svg {
+            width: 18px;
+            height: 18px;
         }
 
         .section {
@@ -458,6 +490,12 @@
         <div class="header">
             <h1>Municipalidad de Comodoro Rivadavia</h1>
             <p>Licitaciones y Compras Públicas</p>
+            <a href="login.html" class="btn-proveedor">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Portal del Proveedor
+            </a>
         </div>
 
         <div class="section">
