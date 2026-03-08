@@ -54,6 +54,9 @@ async def send_whatsapp_message(to: str, body: str) -> str:
     if not whatsapp_from:
         raise Exception("Número de WhatsApp origen no configurado (TWILIO_WHATSAPP_FROM)")
 
+    # Convertir a string por si viene de pandas como numpy.int64
+    to = str(to)
+
     # Validar formato del número destino
     if not to.startswith("whatsapp:"):
         to = f"whatsapp:{to}"

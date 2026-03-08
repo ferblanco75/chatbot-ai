@@ -1,15 +1,19 @@
 """
 Router para endpoints de proveedores.
 GET /proveedores - Busca proveedores en el padrón municipal
+GET /proveedores/me - Obtiene datos del proveedor autenticado (requiere JWT)
+GET /proveedores/{cuit} - Obtiene datos de un proveedor por CUIT (requiere JWT)
 """
 
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from middleware.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -139,3 +143,96 @@ async def search_proveedores(q: str, limit: int = 50):
     except Exception as e:
         logger.error(f"Error en búsqueda de proveedores: {e}")
         raise HTTPException(status_code=500, detail={"error": "Error al buscar proveedores"})
+
+
+@router.get("/me", response_model=Proveedor)
+async def get_my_profile(current_user: Dict = Depends(get_current_user)):
+    """
+    Obtiene el perfil del proveedor autenticado.
+
+    **Requiere autenticación JWT** (Header: Authorization: Bearer <token>)
+
+    Retorna:
+    - Datos completos del proveedor desde el CSV
+    - Si el proveedor no está en el CSV, retorna datos básicos del JWT
+    """
+    cuit = current_user.get("cuit")
+
+    try:
+        # Buscar proveedor en CSV
+        df = load_proveedores_df()
+
+        if not df.empty:
+            # Normalizar CUIT para búsqueda (remover guiones)
+            cuit_normalized = cuit.replace("-", "").strip()
+            df["cuit_normalized"] = df["cuit"].astype(str).str.replace("-", "").str.strip()
+
+            result = df[df["cuit_normalized"] == cuit_normalized]
+
+            if not result.empty:
+                # Proveedor encontrado en CSV
+                proveedor = result.iloc[0].fillna("").to_dict()
+                logger.info(f"Perfil cargado desde CSV para CUIT {cuit}")
+                return proveedor
+
+        # Si no está en CSV, retornar datos del JWT
+        logger.warning(f"Proveedor {cuit} no encontrado en CSV, retornando datos del JWT")
+        return {
+            "cuit": current_user.get("cuit"),
+            "razon_social": current_user.get("nombre"),
+            "localidad": "",
+            "provincia": "",
+            "rubro": current_user.get("rubro", ""),
+            "whatsapp": current_user.get("whatsapp", "")
+        }
+
+    except Exception as e:
+        logger.error(f"Error obteniendo perfil: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Error al obtener perfil"})
+
+
+@router.get("/{cuit}", response_model=Proveedor)
+async def get_proveedor_by_cuit(
+    cuit: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """
+    Obtiene los datos de un proveedor específico por CUIT.
+
+    **Requiere autenticación JWT** (Header: Authorization: Bearer <token>)
+
+    Nota: Por ahora cualquier proveedor autenticado puede ver otros proveedores.
+    En el futuro se puede restringir para que solo vean su propio perfil.
+
+    Args:
+        cuit: CUIT del proveedor a buscar (con o sin guiones)
+
+    Returns:
+        Datos del proveedor
+    """
+    try:
+        df = load_proveedores_df()
+
+        if df.empty:
+            raise HTTPException(status_code=404, detail={"error": "No se encontró el proveedor"})
+
+        # Normalizar CUITs
+        cuit_normalized = cuit.replace("-", "").strip()
+        df["cuit_normalized"] = df["cuit"].astype(str).str.replace("-", "").str.strip()
+
+        result = df[df["cuit_normalized"] == cuit_normalized]
+
+        if result.empty:
+            raise HTTPException(status_code=404, detail={"error": f"Proveedor con CUIT {cuit} no encontrado"})
+
+        proveedor = result.iloc[0].fillna("").to_dict()
+
+        logger.info(f"Proveedor {cuit} consultado por {current_user.get('cuit')}")
+
+        return proveedor
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obteniendo proveedor {cuit}: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Error al obtener proveedor"})

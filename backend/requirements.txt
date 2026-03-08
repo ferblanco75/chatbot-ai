@@ -19,3 +19,12 @@ pandas==2.2.3
 
 # Environment variables
 python-dotenv==1.0.1
+
+# JWT authentication
+PyJWT==2.9.0
+
+# Rate limiting
+slowapi==0.1.9
+
+# Redis (opcional - para OTP storage en producción)
+redis==5.2.1

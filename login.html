@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Proveedores - AsisteCR+</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Sistema de diseño compartido -->
+    <link rel="stylesheet" href="components.css">
+
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           LOGIN PAGE - LAYOUT CENTRADO
+           ═══════════════════════════════════════════════════════════════ */
+        body {
+            display: flex;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CONTAINER PRINCIPAL
+           ═══════════════════════════════════════════════════════════════ */
+        .login-container {
+            width: 100%;
+            max-width: 440px;
+        }
+
+        /* Logo y branding */
+        .login-brand {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-brand .brand-label {
+            font-family: 'Syne', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,.5);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            margin-bottom: 6px;
+        }
+
+        .login-brand .brand-name {
+            font-family: 'Syne', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--white);
+            letter-spacing: -0.02em;
+        }
+
+        .login-brand .brand-name span {
+            color: var(--gold);
+        }
+
+        .login-brand .brand-subtitle {
+            font-size: 14px;
+            color: rgba(255,255,255,.7);
+            margin-top: 6px;
+        }
+
+        /* Card principal */
+        .login-card {
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 20px 60px rgba(0,0,0,.3);
+            padding: 40px;
+        }
+
+        .login-card h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 8px;
+        }
+
+        .login-card p {
+            font-size: 14px;
+            color: var(--gray-4);
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           FORMULARIOS
+           ═══════════════════════════════════════════════════════════════ */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid var(--gray-2);
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            transition: all 0.2s;
+            background: var(--white);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--sky);
+            box-shadow: 0 0 0 3px rgba(34,120,212,.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--gray-3);
+        }
+
+        .form-input.error {
+            border-color: var(--red);
+        }
+
+        .form-input.error:focus {
+            box-shadow: 0 0 0 3px rgba(192,48,42,.1);
+        }
+
+        /* Input especial para OTP (mono font) */
+        .form-input.otp-input {
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: var(--gray-4);
+            margin-top: 6px;
+        }
+
+        /* Botón submit */
+        .btn-submit {
+            width: 100%;
+            padding: 13px 24px;
+            background: var(--blue);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            background: var(--sky);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-submit:disabled {
+            background: var(--gray-3);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-submit .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Botón secundario */
+        .btn-back {
+            width: 100%;
+            padding: 10px 20px;
+            background: transparent;
+            color: var(--gray-4);
+            border: 1.5px solid var(--gray-2);
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+        }
+
+        .btn-back:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ALERTAS
+           ═══════════════════════════════════════════════════════════════ */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert.show {
+            display: flex;
+        }
+
+        .alert-error {
+            background: #FDE8E8;
+            border: 1px solid rgba(192,48,42,.25);
+            color: var(--red);
+        }
+
+        .alert-success {
+            background: var(--green-l);
+            border: 1px solid rgba(15,122,69,.25);
+            color: var(--green);
+        }
+
+        .alert-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .alert-text {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ESTADOS DE PANTALLA
+           ═══════════════════════════════════════════════════════════════ */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Success state */
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--green-l);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 20px;
+            color: var(--green);
+        }
+
+        /* Footer */
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .login-footer a {
+            color: rgba(255,255,255,.8);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .login-footer a:hover {
+            color: var(--white);
+        }
+
+        /* Resent code link */
+        .resend-link {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--gray-4);
+        }
+
+        .resend-link button {
+            background: none;
+            border: none;
+            color: var(--blue);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            font-size: 13px;
+        }
+
+        .resend-link button:hover {
+            color: var(--sky);
+        }
+
+        .resend-link button:disabled {
+            color: var(--gray-3);
+            cursor: not-allowed;
+            text-decoration: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ANIMACIÓN SHAKE PARA ERRORES
+           ═══════════════════════════════════════════════════════════════ */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+            20%, 40%, 60%, 80% { transform: translateX(6px); }
+        }
+
+        .shake {
+            animation: shake 0.4s ease;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           OTP INPUTS - 6 inputs individuales con auto-avance
+           ═══════════════════════════════════════════════════════════════ */
+        .otp-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .otp-digit {
+            width: 100%;
+            aspect-ratio: 1;
+            padding: 0;
+            border: 2px solid var(--gray-2);
+            border-radius: var(--radius);
+            font-family: 'Syne', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            color: var(--navy);
+            text-transform: uppercase;
+            transition: all 0.2s;
+            background: var(--white);
+        }
+
+        .otp-digit:focus {
+            outline: none;
+            border-color: var(--sky);
+            box-shadow: 0 0 0 3px rgba(34,120,212,.1);
+        }
+
+        .otp-digit.filled {
+            border-color: var(--green);
+            background: var(--green-l);
+        }
+
+        .otp-digit.error {
+            border-color: var(--red);
+            background: #FDEAEC;
+        }
+
+        /* Timer de expiración OTP */
+        .expiration-timer {
+            text-align: center;
+            font-size: 13px;
+            color: var(--gray-4);
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        .expiration-timer.warning {
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        .expiration-timer.expired {
+            color: var(--red);
+            font-weight: 600;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════════════════ */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 28px 24px;
+            }
+
+            .login-brand .brand-name {
+                font-size: 26px;
+            }
+
+            .otp-digit {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Branding -->
+        <div class="login-brand">
+            <div class="brand-label">Portal del Proveedor</div>
+            <div class="brand-name">Asiste<span>CR+</span></div>
+            <div class="brand-subtitle">Municipalidad de Comodoro Rivadavia</div>
+        </div>
+
+        <!-- Card principal -->
+        <div class="login-card">
+            <!-- ═══════════════════════════════════════════════════════════════
+                 PANTALLA 1: Solicitar código OTP
+                 ═══════════════════════════════════════════════════════════════ -->
+            <div id="screen-request" class="screen active">
+                <h2>Acceso con CUIT</h2>
+                <p>Ingresá tu CUIT para recibir un código de acceso por WhatsApp.</p>
+
+                <!-- Alert de errores -->
+                <div id="alert-request" class="alert alert-error">
+                    <span class="alert-icon">⚠️</span>
+                    <div class="alert-content">
+                        <div class="alert-title">Error</div>
+                        <div class="alert-text" id="alert-request-text"></div>
+                    </div>
+                </div>
+
+                <form id="form-request-code" onsubmit="return false;">
+                    <div class="form-group">
+                        <label class="form-label" for="input-cuit">CUIT</label>
+                        <input
+                            type="text"
+                            id="input-cuit"
+                            class="form-input"
+                            placeholder="XX-XXXXXXXX-X o sin guiones"
+                            maxlength="13"
+                            required
+                        >
+                        <div class="form-hint">Ejemplo: 30-12345678-9 o 30123456789</div>
+                    </div>
+
+                    <button type="submit" id="btn-request" class="btn-submit">
+                        Solicitar código
+                    </button>
+                </form>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 PANTALLA 2: Ingresar código OTP
+                 ═══════════════════════════════════════════════════════════════ -->
+            <div id="screen-verify" class="screen">
+                <h2>Verificar código</h2>
+                <p>Te enviamos un código de 6 caracteres a tu WhatsApp <strong id="whatsapp-masked"></strong>.</p>
+
+                <!-- Alert de errores -->
+                <div id="alert-verify" class="alert alert-error">
+                    <span class="alert-icon">⚠️</span>
+                    <div class="alert-content">
+                        <div class="alert-title">Código inválido</div>
+                        <div class="alert-text" id="alert-verify-text"></div>
+                    </div>
+                </div>
+
+                <!-- Alert de éxito (código enviado) -->
+                <div id="alert-sent" class="alert alert-success show">
+                    <span class="alert-icon">✓</span>
+                    <div class="alert-content">
+                        <div class="alert-title">Código enviado</div>
+                        <div class="alert-text">Revisá tu WhatsApp. El código es válido por 30 minutos.</div>
+                    </div>
+                </div>
+
+                <form id="form-verify-code" onsubmit="return false;">
+                    <div class="form-group">
+                        <label class="form-label">Código OTP</label>
+                        <div class="otp-grid" id="otp-grid">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="0" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="1" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="2" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="3" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="4" autocomplete="off">
+                            <input type="text" class="otp-digit" maxlength="1" data-index="5" autocomplete="off">
+                        </div>
+                        <div class="form-hint">Ingresá el código de 6 caracteres que recibiste por WhatsApp</div>
+                    </div>
+
+                    <!-- Timer de expiración -->
+                    <div id="expiration-timer" class="expiration-timer"></div>
+
+                    <button type="submit" id="btn-verify" class="btn-submit" disabled>
+                        Verificar e ingresar
+                    </button>
+
+                    <button type="button" id="btn-back" class="btn-back">
+                        ← Volver atrás
+                    </button>
+                </form>
+
+                <!-- Reenviar código -->
+                <div class="resend-link">
+                    ¿No recibiste el código?
+                    <button id="btn-resend" disabled>Reenviar</button>
+                    <span id="resend-timer"></span>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 PANTALLA 3: Éxito (redireccionando)
+                 ═══════════════════════════════════════════════════════════════ -->
+            <div id="screen-success" class="screen">
+                <div class="success-icon">✓</div>
+                <h2 style="text-align: center;">¡Bienvenido!</h2>
+                <p style="text-align: center;">Acceso exitoso. Redireccionando al portal...</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="login-footer">
+            <a href="index.html">← Volver al inicio</a>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         JAVASCRIPT - Lógica de autenticación
+         ═══════════════════════════════════════════════════════════════ -->
+    <script>
+        // ══════════════════════════════════════════════════════════════
+        // CONFIGURACIÓN
+        // ══════════════════════════════════════════════════════════════
+        const API_URL = 'http://localhost:8000'; // Cambiar en producción
+
+        // Estado global
+        let currentCuit = '';
+        let resendTimer = null;
+        let expirationTimer = null;
+        let otpExpirationTime = null;
+        let resendCountdown = 60; // segundos hasta poder reenviar
+
+        // ══════════════════════════════════════════════════════════════
+        // HELPERS
+        // ══════════════════════════════════════════════════════════════
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-' + screenId).classList.add('active');
+        }
+
+        function showAlert(alertId, message) {
+            const alert = document.getElementById(alertId);
+            const textEl = document.getElementById(alertId + '-text');
+            if (textEl) textEl.textContent = message;
+            alert.classList.add('show');
+        }
+
+        function hideAlert(alertId) {
+            const alert = document.getElementById(alertId);
+            alert.classList.remove('show');
+        }
+
+        function setLoading(buttonId, loading) {
+            const btn = document.getElementById(buttonId);
+            if (loading) {
+                btn.disabled = true;
+                const originalText = btn.textContent;
+                btn.dataset.originalText = originalText;
+                btn.innerHTML = '<span class="spinner"></span>' + originalText;
+            } else {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.originalText || btn.textContent.replace(/^.*?\s/, '');
+            }
+        }
+
+        function normalizeCuit(cuit) {
+            return cuit.replace(/[-\s]/g, '').trim();
+        }
+
+        function formatCuit(value) {
+            // Remover todo excepto números
+            const numbers = value.replace(/\D/g, '');
+
+            // Aplicar formato XX-XXXXXXXX-X
+            if (numbers.length <= 2) {
+                return numbers;
+            } else if (numbers.length <= 10) {
+                return `${numbers.slice(0, 2)}-${numbers.slice(2)}`;
+            } else {
+                return `${numbers.slice(0, 2)}-${numbers.slice(2, 10)}-${numbers.slice(10, 11)}`;
+            }
+        }
+
+        function isValidCuit(cuit) {
+            const numbers = cuit.replace(/\D/g, '');
+            return numbers.length === 11;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // TIMER DE REENVÍO
+        // ══════════════════════════════════════════════════════════════
+        function startResendTimer() {
+            resendCountdown = 60;
+            const btnResend = document.getElementById('btn-resend');
+            const timerEl = document.getElementById('resend-timer');
+
+            btnResend.disabled = true;
+
+            resendTimer = setInterval(() => {
+                resendCountdown--;
+                timerEl.textContent = `(${resendCountdown}s)`;
+
+                if (resendCountdown <= 0) {
+                    clearInterval(resendTimer);
+                    btnResend.disabled = false;
+                    timerEl.textContent = '';
+                }
+            }, 1000);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // TIMER DE EXPIRACIÓN OTP (30 minutos)
+        // ══════════════════════════════════════════════════════════════
+        function startExpirationTimer() {
+            // Calcular tiempo de expiración (30 minutos desde ahora)
+            otpExpirationTime = Date.now() + (30 * 60 * 1000);
+
+            const timerEl = document.getElementById('expiration-timer');
+
+            function updateTimer() {
+                const now = Date.now();
+                const remaining = otpExpirationTime - now;
+
+                if (remaining <= 0) {
+                    // Código expirado
+                    clearInterval(expirationTimer);
+                    timerEl.innerHTML = '⏰ El código ha expirado';
+                    timerEl.className = 'expiration-timer expired';
+
+                    // Deshabilitar verificación
+                    document.getElementById('btn-verify').disabled = true;
+
+                    // Mostrar alerta
+                    showAlert('alert-verify', 'El código ha expirado. Solicitá uno nuevo.');
+                    return;
+                }
+
+                // Calcular minutos y segundos
+                const minutes = Math.floor(remaining / 60000);
+                const seconds = Math.floor((remaining % 60000) / 1000);
+
+                // Formatear display
+                const display = `Expira en ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                timerEl.textContent = display;
+
+                // Cambiar color si quedan menos de 5 minutos
+                if (minutes < 5) {
+                    timerEl.className = 'expiration-timer warning';
+                } else {
+                    timerEl.className = 'expiration-timer';
+                }
+            }
+
+            // Actualizar inmediatamente y luego cada segundo
+            updateTimer();
+            expirationTimer = setInterval(updateTimer, 1000);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // OTP INPUTS - Auto-avance, auto-paste, validación
+        // ══════════════════════════════════════════════════════════════
+        function setupOTPInputs() {
+            const otpInputs = document.querySelectorAll('.otp-digit');
+
+            otpInputs.forEach((input, index) => {
+                // Auto-avance al escribir
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value.toUpperCase();
+                    e.target.value = value;
+
+                    // Remover estado de error
+                    e.target.classList.remove('error');
+
+                    if (value.length === 1) {
+                        input.classList.add('filled');
+
+                        // Avanzar al siguiente input
+                        if (index < otpInputs.length - 1) {
+                            otpInputs[index + 1].focus();
+                        }
+                    } else {
+                        input.classList.remove('filled');
+                    }
+
+                    // Verificar si todos los inputs están llenos
+                    checkOTPComplete();
+                });
+
+                // Backspace: volver al input anterior
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace') {
+                        e.target.value = '';
+                        e.target.classList.remove('filled', 'error');
+
+                        if (index > 0) {
+                            otpInputs[index - 1].focus();
+                        }
+
+                        checkOTPComplete();
+                    }
+                });
+
+                // Auto-paste: detectar pegado de código completo
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text').toUpperCase().replace(/\s/g, '');
+
+                    if (pastedData.length >= 6) {
+                        // Distribuir cada carácter en su input
+                        otpInputs.forEach((otpInput, i) => {
+                            otpInput.value = pastedData[i] || '';
+                            if (pastedData[i]) {
+                                otpInput.classList.add('filled');
+                                otpInput.classList.remove('error');
+                            }
+                        });
+
+                        // Focus en el último input
+                        otpInputs[5].focus();
+
+                        // Verificar completitud
+                        checkOTPComplete();
+                    }
+                });
+
+                // Enter: submit si está completo
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const btnVerify = document.getElementById('btn-verify');
+                        if (!btnVerify.disabled) {
+                            document.getElementById('form-verify-code').dispatchEvent(new Event('submit'));
+                        }
+                    }
+                });
+            });
+        }
+
+        function checkOTPComplete() {
+            const code = getOTPCode();
+            const btnVerify = document.getElementById('btn-verify');
+            btnVerify.disabled = code.length !== 6;
+        }
+
+        function getOTPCode() {
+            const otpInputs = document.querySelectorAll('.otp-digit');
+            return Array.from(otpInputs).map(input => input.value).join('');
+        }
+
+        function clearOTPInputs() {
+            const otpInputs = document.querySelectorAll('.otp-digit');
+            otpInputs.forEach(input => {
+                input.value = '';
+                input.classList.remove('filled', 'error');
+            });
+            document.getElementById('btn-verify').disabled = true;
+        }
+
+        function shakeOTPInputs() {
+            const otpInputs = document.querySelectorAll('.otp-digit');
+            const otpGrid = document.getElementById('otp-grid');
+
+            // Agregar clase error y shake a todos los inputs
+            otpInputs.forEach(input => {
+                input.classList.add('error');
+            });
+
+            // Shake al contenedor
+            otpGrid.classList.add('shake');
+
+            // Remover shake después de la animación
+            setTimeout(() => {
+                otpGrid.classList.remove('shake');
+            }, 400);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // PANTALLA 1: Solicitar código
+        // ══════════════════════════════════════════════════════════════
+        document.getElementById('form-request-code').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const cuitInput = document.getElementById('input-cuit');
+            const cuit = cuitInput.value.trim();
+
+            // Validación básica
+            if (!cuit) {
+                showAlert('alert-request', 'Por favor ingresá tu CUIT.');
+                cuitInput.classList.add('error');
+                return;
+            }
+
+            const cuitNormalized = normalizeCuit(cuit);
+            if (cuitNormalized.length !== 11) {
+                showAlert('alert-request', 'El CUIT debe tener 11 dígitos.');
+                cuitInput.classList.add('error');
+                return;
+            }
+
+            // Limpiar errores previos
+            hideAlert('alert-request');
+            cuitInput.classList.remove('error');
+
+            // Guardar CUIT en estado global
+            currentCuit = cuit;
+
+            // Llamar al backend
+            setLoading('btn-request', true);
+
+            try {
+                const response = await fetch(`${API_URL}/auth/request-code`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cuit })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Error al solicitar código');
+                }
+
+                // Éxito: mostrar pantalla de verificación
+                document.getElementById('whatsapp-masked').textContent = data.whatsapp || '****';
+                showScreen('verify');
+
+                // Inicializar inputs OTP
+                setupOTPInputs();
+
+                // Focus en primer input
+                document.querySelector('.otp-digit').focus();
+
+                // Iniciar timers
+                startResendTimer();
+                startExpirationTimer();
+
+            } catch (error) {
+                console.error('Error requesting OTP:', error);
+                showAlert('alert-request', error.message || 'Error al conectar con el servidor. Intente nuevamente.');
+            } finally {
+                setLoading('btn-request', false);
+            }
+        });
+
+        // ══════════════════════════════════════════════════════════════
+        // PANTALLA 2: Verificar código
+        // ══════════════════════════════════════════════════════════════
+        document.getElementById('form-verify-code').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const otp = getOTPCode();
+
+            // Validación básica
+            if (!otp || otp.length !== 6) {
+                showAlert('alert-verify', 'El código debe tener 6 caracteres.');
+                shakeOTPInputs();
+                return;
+            }
+
+            // Limpiar errores previos
+            hideAlert('alert-verify');
+
+            // Llamar al backend
+            setLoading('btn-verify', true);
+
+            try {
+                const response = await fetch(`${API_URL}/auth/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        cuit: currentCuit,
+                        code: otp
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Código inválido');
+                }
+
+                // Éxito: guardar JWT y datos del proveedor
+                sessionStorage.setItem('jwt_token', data.token);
+                sessionStorage.setItem('proveedor_data', JSON.stringify(data.proveedor));
+
+                // Mostrar pantalla de éxito
+                showScreen('success');
+
+                // Redirigir al portal después de 1.5 segundos
+                setTimeout(() => {
+                    window.location.href = 'portal.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error verifying OTP:', error);
+                showAlert('alert-verify', error.message || 'Código inválido o expirado. Intentá nuevamente.');
+
+                // Shake animation
+                shakeOTPInputs();
+
+                // Limpiar inputs
+                clearOTPInputs();
+
+                // Focus en primer input
+                setTimeout(() => {
+                    document.querySelector('.otp-digit').focus();
+                }, 400);
+
+            } finally {
+                setLoading('btn-verify', false);
+            }
+        });
+
+        // ══════════════════════════════════════════════════════════════
+        // BOTÓN VOLVER ATRÁS
+        // ══════════════════════════════════════════════════════════════
+        document.getElementById('btn-back').addEventListener('click', () => {
+            // Limpiar formularios y alertas
+            clearOTPInputs();
+            hideAlert('alert-verify');
+            hideAlert('alert-sent');
+
+            // Detener timers
+            if (resendTimer) {
+                clearInterval(resendTimer);
+            }
+            if (expirationTimer) {
+                clearInterval(expirationTimer);
+            }
+
+            // Volver a pantalla 1
+            showScreen('request');
+        });
+
+        // ══════════════════════════════════════════════════════════════
+        // REENVIAR CÓDIGO
+        // ══════════════════════════════════════════════════════════════
+        document.getElementById('btn-resend').addEventListener('click', async () => {
+            const btnResend = document.getElementById('btn-resend');
+            btnResend.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/request-code`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cuit: currentCuit })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Error al reenviar código');
+                }
+
+                // Mostrar alerta de éxito
+                hideAlert('alert-verify');
+                showAlert('alert-sent', 'Código reenviado exitosamente.');
+
+                // Limpiar inputs OTP
+                clearOTPInputs();
+
+                // Focus en primer input
+                document.querySelector('.otp-digit').focus();
+
+                // Reiniciar timers (reenvío y expiración)
+                if (resendTimer) clearInterval(resendTimer);
+                if (expirationTimer) clearInterval(expirationTimer);
+
+                startResendTimer();
+                startExpirationTimer();
+
+            } catch (error) {
+                console.error('Error resending OTP:', error);
+                showAlert('alert-verify', 'Error al reenviar código. Intente nuevamente.');
+                btnResend.disabled = false;
+            }
+        });
+
+        // ══════════════════════════════════════════════════════════════
+        // FORMATEO AUTOMÁTICO DE CUIT
+        // ══════════════════════════════════════════════════════════════
+        document.getElementById('input-cuit').addEventListener('input', (e) => {
+            // Auto-formatear CUIT con guiones
+            e.target.value = formatCuit(e.target.value);
+
+            // Remover clases de error al escribir
+            e.target.classList.remove('error');
+            hideAlert('alert-request');
+        });
+
+        // ══════════════════════════════════════════════════════════════
+        // INIT: Verificar si ya hay sesión activa
+        // ══════════════════════════════════════════════════════════════
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = sessionStorage.getItem('jwt_token');
+
+            if (token) {
+                // Ya hay sesión activa, redirigir al portal
+                window.location.href = 'portal.html';
+            }
+        });
+    </script>
+</body>
+</html>
