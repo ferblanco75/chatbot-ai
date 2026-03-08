@@ -1,14 +1,18 @@
 """
 Router para endpoints de notificaciones WhatsApp.
 POST /notificaciones - Envía notificación por WhatsApp
+POST /notificaciones/subscribe - Suscribe a alertas de licitaciones
 """
 
+import json
 import logging
 import os
-from typing import Optional
+from datetime import datetime
+from pathlib import Path
+from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Header
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 from services.whatsapp import send_whatsapp_message
 
@@ -16,12 +20,24 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Path al archivo de suscripciones
+DATA_DIR = Path(__file__).parent.parent / "data"
+SUBSCRIPTIONS_FILE = DATA_DIR / "subscriptions.json"
+
 
 class NotificacionRequest(BaseModel):
     """Modelo para solicitud de notificación."""
     to: str = Field(..., description="Número de teléfono destino (formato E.164: +549XXXXXXXXXX)")
     mensaje: str = Field(..., min_length=10, max_length=1600, description="Mensaje a enviar")
     tipo: Optional[str] = Field("informativo", description="Tipo de notificación: informativo, urgente, recordatorio")
+
+
+class SubscriptionRequest(BaseModel):
+    """Modelo para suscripción a alertas."""
+    nombre: str = Field(..., min_length=2, description="Nombre completo o razón social")
+    email: Optional[EmailStr] = Field(None, description="Email para notificaciones")
+    whatsapp: Optional[str] = Field(None, description="Número de WhatsApp en formato E.164")
+    rubros: List[str] = Field(..., min_items=1, description="Rubros de interés")
 
 
 class NotificacionResponse(BaseModel):
@@ -87,6 +103,75 @@ async def enviar_notificacion(
         raise HTTPException(
             status_code=500,
             detail={"error": f"Error al enviar notificación: {str(e)}"}
+        )
+
+
+@router.post("/subscribe", status_code=201)
+async def subscribe_to_alerts(subscription: SubscriptionRequest):
+    """
+    Suscribe a un proveedor/usuario para recibir alertas de nuevas licitaciones.
+
+    - **nombre**: Nombre completo o razón social
+    - **email**: Email para recibir notificaciones (opcional)
+    - **whatsapp**: Número de WhatsApp en formato E.164 (opcional)
+    - **rubros**: Lista de rubros de interés
+
+    Al menos uno de email o whatsapp debe estar presente.
+    """
+    # Validar que haya al menos un canal de notificación
+    if not subscription.email and not subscription.whatsapp:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Debe proporcionar al menos un email o número de WhatsApp"}
+        )
+
+    # Validar formato de WhatsApp si está presente
+    if subscription.whatsapp and not subscription.whatsapp.startswith("+"):
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "El número de WhatsApp debe estar en formato E.164 (comenzar con +)"}
+        )
+
+    try:
+        # Cargar suscripciones existentes
+        subscriptions = []
+        if SUBSCRIPTIONS_FILE.exists():
+            with open(SUBSCRIPTIONS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                subscriptions = data.get("subscriptions", [])
+
+        # Crear nueva suscripción
+        new_subscription = {
+            "id": f"SUB-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            "nombre": subscription.nombre,
+            "email": subscription.email,
+            "whatsapp": subscription.whatsapp,
+            "rubros": subscription.rubros,
+            "fecha_suscripcion": datetime.now().isoformat(),
+            "activa": True
+        }
+
+        # Agregar a la lista
+        subscriptions.append(new_subscription)
+
+        # Guardar
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(SUBSCRIPTIONS_FILE, "w", encoding="utf-8") as f:
+            json.dump({"subscriptions": subscriptions}, f, ensure_ascii=False, indent=2)
+
+        logger.info(f"Nueva suscripción creada: {new_subscription['id']} - {subscription.nombre}")
+
+        return {
+            "status": "success",
+            "mensaje": "Suscripción creada correctamente",
+            "subscription_id": new_subscription["id"]
+        }
+
+    except Exception as e:
+        logger.error(f"Error al crear suscripción: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": f"Error al crear la suscripción: {str(e)}"}
         )
 
 
