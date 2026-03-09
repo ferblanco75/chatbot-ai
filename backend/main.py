@@ -9,11 +9,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from routers import licitaciones, proveedores, notificaciones, chat, auth
 from middleware.rate_limit import limiter
@@ -28,22 +27,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-# ══════════════════════════════════════════════════════════════
-# MIDDLEWARE PARA OPTIONS
-# ══════════════════════════════════════════════════════════════
-
-class OptionsMiddleware(BaseHTTPMiddleware):
-    """Middleware que maneja peticiones OPTIONS (CORS preflight) antes del rate limiting."""
-
-    async def dispatch(self, request: Request, call_next):
-        if request.method == "OPTIONS":
-            # Para peticiones OPTIONS, retornar respuesta vacía con headers CORS
-            # El CORSMiddleware agregará los headers necesarios
-            return Response(status_code=200)
-
-        return await call_next(request)
 
 
 @asynccontextmanager
@@ -71,15 +54,15 @@ cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://chat
 cors_origins = [origin.strip() for origin in cors_origins_str.split(",")]
 logger.info(f"CORS habilitado para: {cors_origins}")
 
-# IMPORTANTE: OptionsMiddleware debe ir PRIMERO (se ejecuta en orden inverso)
+# Agregar CORSMiddleware - maneja automáticamente preflight OPTIONS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
-app.add_middleware(OptionsMiddleware)
 
 # Montar routers
 app.include_router(auth.router, prefix="/auth", tags=["auth"])

@@ -7,6 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Configuración de API según entorno -->
+    <script src="config.js"></script>
+
     <style>
         /* Reset y variables globales */
         * {
@@ -592,9 +596,6 @@
     </div>
 
     <script>
-        // Configuración del backend
-        const BACKEND_URL = 'https://chatbot-ai-lhib.onrender.com'; // Backend deployado en Render
-
         // Estado del chatbot
         const chatbotState = {
             isOpen: false,
@@ -683,7 +684,7 @@
 
             try {
                 // Llamar al backend
-                const response = await fetch(`${BACKEND_URL}/chat/`, {
+                const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

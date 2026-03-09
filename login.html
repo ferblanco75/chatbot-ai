@@ -13,6 +13,9 @@
     <!-- Sistema de diseño compartido -->
     <link rel="stylesheet" href="components.css">
 
+    <!-- Configuración de API según entorno -->
+    <script src="config.js"></script>
+
     <style>
         /* ═══════════════════════════════════════════════════════════════
            LOGIN PAGE - LAYOUT CENTRADO
@@ -559,7 +562,7 @@
         // ══════════════════════════════════════════════════════════════
         // CONFIGURACIÓN
         // ══════════════════════════════════════════════════════════════
-        const API_URL = 'https://chatbot-ai-lhib.onrender.com'; // Backend deployado en Render
+        // API_URL se carga desde config.js
 
         // Estado global
         let currentCuit = '';
