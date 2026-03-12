@@ -13,6 +13,9 @@
     <!-- Sistema de diseño compartido -->
     <link rel="stylesheet" href="components.css">
 
+    <!-- Configuración de API según entorno -->
+    <script src="config.js"></script>
+
     <style>
         /* ═══════════════════════════════════════════════════════════════
            LAYOUT PRINCIPAL - CSS GRID
@@ -854,7 +857,7 @@
         // ══════════════════════════════════════════════════════════════
         // CONFIG: API URL
         // ══════════════════════════════════════════════════════════════
-        const API_URL = 'http://localhost:8000'; // Cambiar en producción
+        // API_URL se carga desde config.js
 
         // ══════════════════════════════════════════════════════════════
         // AUTH: Verificar JWT al cargar

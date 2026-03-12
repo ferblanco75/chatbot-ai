@@ -291,3 +291,131 @@ async def get_auth_stats():
             "twilio_configured": bool(os.getenv("TWILIO_ACCOUNT_SID"))
         }
     }
+
+
+@router.get("/test-twilio", status_code=status.HTTP_200_OK)
+async def test_twilio_config():
+    """
+    Verifica la configuración de Twilio sin enviar mensajes.
+
+    Solo para debugging. En producción debería estar protegido.
+    """
+    from services.whatsapp import verify_twilio_config
+
+    config = await verify_twilio_config()
+
+    return {
+        "twilio": config,
+        "env_vars": {
+            "TWILIO_ACCOUNT_SID": os.getenv("TWILIO_ACCOUNT_SID")[:10] + "..." if os.getenv("TWILIO_ACCOUNT_SID") else None,
+            "TWILIO_AUTH_TOKEN": "***" if os.getenv("TWILIO_AUTH_TOKEN") else None,
+            "TWILIO_WHATSAPP_FROM": os.getenv("TWILIO_WHATSAPP_FROM")
+        }
+    }
+
+
+class TestWhatsAppRequest(BaseModel):
+    """Request body para enviar WhatsApp de prueba."""
+    phone_number: str = Field(..., description="Número de teléfono en formato E.164 (ej: +5492974123456)")
+    message: Optional[str] = Field(None, description="Mensaje personalizado (opcional)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "phone_number": "+5492974123456",
+                "message": "Mensaje de prueba desde AsisteCR+"
+            }
+        }
+
+
+@router.post("/test-whatsapp", status_code=status.HTTP_200_OK)
+async def test_whatsapp_send(request: TestWhatsAppRequest):
+    """
+    Envía un mensaje de WhatsApp de prueba.
+
+    Solo para debugging. En producción debería estar protegido con contraseña admin.
+    """
+    mensaje = request.message or "Este es un mensaje de prueba desde AsisteCR+ - Sistema de Autenticación"
+
+    try:
+        message_sid = await send_whatsapp_message(
+            to=request.phone_number,
+            body=mensaje
+        )
+
+        return {
+            "success": True,
+            "message": "Mensaje enviado exitosamente",
+            "message_sid": message_sid,
+            "to": request.phone_number
+        }
+
+    except Exception as e:
+        logger.error(f"Error en test de WhatsApp: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al enviar mensaje: {str(e)}"
+        )
+
+
+@router.post("/debug-request-code", status_code=status.HTTP_200_OK)
+async def debug_request_code(request: RequestCodeRequest):
+    """
+    Versión debug de request-code sin rate limiting.
+
+    Para identificar el error específico.
+    """
+    try:
+        # Paso 1: Buscar proveedor
+        logger.info(f"Buscando proveedor con CUIT: {request.cuit}")
+        proveedor = find_proveedor(request.cuit)
+
+        if not proveedor:
+            return {"error": "Proveedor no encontrado", "cuit": request.cuit}
+
+        logger.info(f"Proveedor encontrado: {proveedor}")
+
+        # Paso 2: Generar OTP
+        otp = generate_otp()
+        logger.info(f"OTP generado: {otp}")
+
+        # Paso 3: Preparar mensaje
+        mensaje = f"""¡Hola {proveedor['razon_social']}!
+
+Tu código de acceso a AsisteCR+ Portal del Proveedor es:
+
+*{otp}*
+
+Este código es válido por 30 minutos.
+
+_Municipalidad de Comodoro Rivadavia_"""
+
+        logger.info(f"Mensaje preparado, enviando a: {proveedor['whatsapp']}")
+
+        # Paso 4: Enviar WhatsApp
+        message_sid = await send_whatsapp_message(
+            to=proveedor['whatsapp'],
+            body=mensaje
+        )
+
+        logger.info(f"Mensaje enviado: {message_sid}")
+
+        # Paso 5: Almacenar OTP
+        store_otp(cuit=normalize_cuit(request.cuit), otp=otp)
+
+        return {
+            "success": True,
+            "proveedor": proveedor['razon_social'],
+            "whatsapp": proveedor['whatsapp'],
+            "otp": otp,  # Solo para debug
+            "message_sid": message_sid
+        }
+
+    except Exception as e:
+        logger.error(f"Error en debug-request-code: {e}", exc_info=True)
+        import traceback
+        return {
+            "error": str(e),
+            "type": type(e).__name__,
+            "traceback": traceback.format_exc()
+        }
