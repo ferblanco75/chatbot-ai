@@ -144,7 +144,7 @@ def find_proveedor(cuit: str) -> Optional[dict]:
 
 @router.post("/request-code", status_code=status.HTTP_200_OK)
 @limiter.limit("3/minute")  # Máximo 3 solicitudes por minuto
-async def request_code(http_request: Request, request: RequestCodeRequest):
+async def request_code(request: Request, body: RequestCodeRequest):
     """
     Solicita un código OTP enviado por email.
 
@@ -161,10 +161,10 @@ async def request_code(http_request: Request, request: RequestCodeRequest):
     cleanup_expired_otps()
 
     # Buscar proveedor
-    proveedor = find_proveedor(request.cuit)
+    proveedor = find_proveedor(body.cuit)
 
     if not proveedor:
-        logger.warning(f"Intento de autenticación con CUIT no registrado: {request.cuit}")
+        logger.warning(f"Intento de autenticación con CUIT no registrado: {body.cuit}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="CUIT no encontrado en el padrón de proveedores"
@@ -197,7 +197,7 @@ async def request_code(http_request: Request, request: RequestCodeRequest):
         )
 
     # Almacenar código
-    store_otp(cuit=normalize_cuit(request.cuit), otp=otp)
+    store_otp(cuit=normalize_cuit(body.cuit), otp=otp)
 
     # Enmascarar email: usuario@dominio.com → usu***@dominio.com
     partes = email.split('@')
@@ -212,7 +212,7 @@ async def request_code(http_request: Request, request: RequestCodeRequest):
 
 @router.post("/verify", status_code=status.HTTP_200_OK, response_model=AuthResponse)
 @limiter.limit("5/minute")  # Máximo 5 intentos de verificación por minuto
-async def verify_code(http_request: Request, request: VerifyCodeRequest):
+async def verify_code(request: Request, body: VerifyCodeRequest):
     """
     Verifica el código OTP y retorna un JWT.
 
@@ -228,7 +228,7 @@ async def verify_code(http_request: Request, request: VerifyCodeRequest):
     cleanup_expired_otps()
 
     # Buscar proveedor
-    proveedor = find_proveedor(request.cuit)
+    proveedor = find_proveedor(body.cuit)
 
     if not proveedor:
         raise HTTPException(
@@ -237,10 +237,10 @@ async def verify_code(http_request: Request, request: VerifyCodeRequest):
         )
 
     # Verificar código OTP
-    cuit_normalized = normalize_cuit(request.cuit)
+    cuit_normalized = normalize_cuit(body.cuit)
 
-    if not verify_otp(cuit=cuit_normalized, otp=request.code):
-        logger.warning(f"Intento de login con código inválido para CUIT {request.cuit}")
+    if not verify_otp(cuit=cuit_normalized, otp=body.code):
+        logger.warning(f"Intento de login con código inválido para CUIT {body.cuit}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Código inválido o expirado"

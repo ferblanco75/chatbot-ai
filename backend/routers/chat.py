@@ -94,8 +94,8 @@ class ChatRequest(BaseModel):
 @router.post("")
 @limiter.limit("20/minute")  # Máximo 20 mensajes por minuto
 async def chat(
-    http_request: Request,
-    request: ChatRequest,
+    request: Request,
+    body: ChatRequest,
     current_user: Optional[dict] = Depends(get_optional_user)
 ):
     """
@@ -143,7 +143,7 @@ Tené en cuenta el rubro del proveedor al recomendar licitaciones compatibles.""
                 model="claude-sonnet-4-6",
                 max_tokens=700,
                 system=system,
-                messages=[{"role": m.role, "content": m.content} for m in request.messages],
+                messages=[{"role": m.role, "content": m.content} for m in body.messages],
             ) as stream:
                 async for text in stream.text_stream:
                     yield f"data: {json.dumps({'content': text})}\n\n"
