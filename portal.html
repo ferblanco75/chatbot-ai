@@ -780,72 +780,170 @@
         <div id="screen-normativa" class="screen">
             <div class="page-header">
                 <h1>Normativa</h1>
-                <p>Marco legal y regulatorio de compras públicas</p>
+                <p>Marco legal y regulatorio de compras públicas municipales</p>
             </div>
             <div class="page-content">
 
                 <!-- CTA al asistente -->
                 <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
-                    <strong>¿Tenés dudas sobre normativa?</strong>
-                    <a href="#chat" style="color: var(--blue); text-decoration: underline; margin-left: 8px;">
-                        Consultá con el Asistente IA
-                    </a>
+                    <strong>¿Tenés dudas sobre normativa o procesos?</strong>
+                    <a href="#chat" data-screen="chat" style="color: var(--blue); text-decoration: underline; margin-left: 8px;">Consultá con Codi, el Asistente IA</a>
                 </div>
 
-                <!-- Grid de documentos -->
-                <div style="display: grid; gap: 16px;">
-
-                    <div class="card">
-                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-                            <div>
-                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Ley II N°76 - Contrataciones del Estado Provincial</h3>
-                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Legislación Chubut</p>
-                            </div>
-                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
-                        </div>
+                <!-- Sección: Leyes y decretos -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3>Leyes y Decretos</h3>
                     </div>
-
-                    <div class="card">
-                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-                            <div>
-                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Ley N°4829 - Compre Chubut</h3>
-                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Preferencia proveedores locales</p>
-                            </div>
-                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
-                        </div>
+                    <div class="card-body" style="padding: 0;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Norma</th>
+                                    <th>Descripción</th>
+                                    <th>Ámbito</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Ley II N°76</strong></td>
+                                    <td>Contrataciones del Estado Provincial de Chubut</td>
+                                    <td><span class="badge badge-open">Provincial</span></td>
+                                    <td>
+                                        <button class="btn-ghost" style="font-size: 12px; padding: 4px 10px;"
+                                            onclick="consultarNormativa('Explicame la Ley II N°76 de Contrataciones del Estado Provincial de Chubut')">
+                                            Consultar IA
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ley N°4829</strong></td>
+                                    <td>Compre Chubut — preferencia a proveedores locales</td>
+                                    <td><span class="badge badge-open">Provincial</span></td>
+                                    <td>
+                                        <button class="btn-ghost" style="font-size: 12px; padding: 4px 10px;"
+                                            onclick="consultarNormativa('¿Qué dice la Ley Compre Chubut N°4829 y cómo me beneficia como proveedor local?')">
+                                            Consultar IA
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Decreto 777/06</strong></td>
+                                    <td>Reglamentación del proceso de contrataciones municipales</td>
+                                    <td><span class="badge badge-pending">Municipal</span></td>
+                                    <td>
+                                        <button class="btn-ghost" style="font-size: 12px; padding: 4px 10px;"
+                                            onclick="consultarNormativa('¿Qué establece el Decreto 777/06 sobre contrataciones municipales?')">
+                                            Consultar IA
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                </div>
 
-                    <div class="card">
-                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-                            <div>
-                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Pliego de Bases y Condiciones Generales (PBCG)</h3>
-                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Condiciones generales de licitación</p>
-                            </div>
-                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
-                        </div>
+                <!-- Sección: Documentos del proceso -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3>Documentos del Proceso Licitatorio</h3>
                     </div>
+                    <div style="display: grid; gap: 1px; background: var(--gray-2);">
 
-                    <div class="card">
-                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                        <div style="background: var(--white); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
                             <div>
-                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Guía de Inscripción de Proveedores</h3>
-                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Requisitos y documentación</p>
+                                <div style="font-weight: 600; font-size: 14px; color: var(--navy); margin-bottom: 2px;">Pliego de Bases y Condiciones Generales (PBCG)</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">Condiciones comunes a todas las licitaciones municipales</div>
                             </div>
-                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button class="btn-ghost" style="font-size: 12px; padding: 6px 12px;"
+                                    onclick="consultarNormativa('¿Qué contiene el Pliego de Bases y Condiciones Generales (PBCG) y qué debo tener en cuenta?')">
+                                    Consultar IA
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
+                        <div style="background: var(--white); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px; color: var(--navy); margin-bottom: 2px;">Pliego de Bases y Condiciones Particulares (PBCP)</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">Específico de cada licitación — prevalece sobre el PBCG</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button class="btn-ghost" style="font-size: 12px; padding: 6px 12px;"
+                                    onclick="consultarNormativa('¿Qué es el PBCP y en qué se diferencia del PBCG?')">
+                                    Consultar IA
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="background: var(--white); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px; color: var(--navy); margin-bottom: 2px;">Guía de Inscripción de Proveedores</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">Requisitos, documentación y pasos para inscribirse en el padrón</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button class="btn-ghost" style="font-size: 12px; padding: 6px 12px;"
+                                    onclick="consultarNormativa('¿Cuáles son los pasos y documentos necesarios para inscribirse como proveedor municipal?')">
+                                    Consultar IA
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Sección: Preguntas frecuentes navegables -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3>Preguntas frecuentes</h3>
+                    </div>
+                    <div style="display: grid; gap: 1px; background: var(--gray-2);">
+                        <button onclick="consultarNormativa('¿Cuáles son los tipos de contratación municipal y cuándo se usa cada uno?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Qué tipos de licitación existen? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                        <button onclick="consultarNormativa('¿Cómo armo el sobre para presentar una oferta en una licitación?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Cómo armo el sobre para presentar una oferta? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                        <button onclick="consultarNormativa('¿Qué es la garantía de oferta y cómo se integra?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Qué es la garantía de oferta y cómo se integra? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                        <button onclick="consultarNormativa('¿Cómo funciona el acto de apertura de una licitación y qué pasa después?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Cómo es el acto de apertura y qué sigue después? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                        <button onclick="consultarNormativa('¿Puedo impugnar una adjudicación? ¿Cómo y en qué plazo?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Puedo impugnar una adjudicación? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Contacto -->
-                <div class="card" style="margin-top: 24px;">
+                <div class="card">
                     <div class="card-header">
                         <h3>Contacto Oficial</h3>
                     </div>
-                    <div class="card-body">
-                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Email:</strong> licitacionesyconcursos@comodoro.gov.ar</p>
-                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Dirección:</strong> Namuncurá 26, Comodoro Rivadavia</p>
-                        <p style="margin: 0; font-size: 14px;"><strong>Horario:</strong> Lunes a viernes, hasta 12:00 hs del día anterior a apertura</p>
+                    <div class="card-body" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                        <div>
+                            <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Licitaciones y concursos</div>
+                            <div style="font-size: 14px; font-weight: 500;">licitacionesyconcursos@comodoro.gov.ar</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Inscripción de proveedores</div>
+                            <div style="font-size: 14px; font-weight: 500;">controldocumentalyproveedores@comodoro.gov.ar</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Dirección</div>
+                            <div style="font-size: 14px; font-weight: 500;">Namuncurá 26, Comodoro Rivadavia</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Horario</div>
+                            <div style="font-size: 14px; font-weight: 500;">Lunes a viernes hasta 12:00 hs (día anterior a apertura)</div>
+                        </div>
                     </div>
                 </div>
 
@@ -879,17 +977,88 @@
         <div id="screen-notificaciones" class="screen">
             <div class="page-header">
                 <h1>Notificaciones</h1>
-                <p>Historial de alertas y mensajes</p>
+                <p>Historial de alertas recibidas por WhatsApp</p>
             </div>
             <div class="page-content">
 
+                <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
+                    <strong>Alertas por WhatsApp:</strong> Cuando haya licitaciones compatibles con tu rubro, recibirás una notificación automática en tu WhatsApp registrado.
+                </div>
+
+                <!-- KPIs -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div class="stat-card c-blue">
+                        <div class="stat-val">3</div>
+                        <div class="stat-label">Alertas recibidas</div>
+                    </div>
+                    <div class="stat-card c-green">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">Este mes</div>
+                    </div>
+                    <div class="stat-card c-gold">
+                        <div class="stat-val">2</div>
+                        <div class="stat-label">Licitaciones notificadas</div>
+                    </div>
+                </div>
+
+                <!-- Historial -->
                 <div class="card">
-                    <div class="card-body">
-                        <div style="text-align: center; padding: 60px 40px; color: var(--gray-4);">
-                            <div style="font-size: 64px; margin-bottom: 16px;">🔔</div>
-                            <h3 style="font-size: 18px; margin-bottom: 8px; color: var(--navy);">No tenés notificaciones nuevas</h3>
-                            <p style="font-size: 14px; margin: 0;">Cuando haya novedades, las verás acá.</p>
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Historial de alertas</h3>
+                        <span class="badge badge-pending">Datos ilustrativos</span>
+                    </div>
+                    <div style="display: grid; gap: 1px; background: var(--gray-2);">
+
+                        <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+                            <div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 3 días · WhatsApp</div>
+                                <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Nueva licitación compatible con tu rubro</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">EXP-2026-0031 · Mantenimiento de espacios verdes · Apertura: 20/03/2026</div>
+                            </div>
+                            <span class="badge badge-active">Leída</span>
                         </div>
+
+                        <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+                            <div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 2 semanas · WhatsApp</div>
+                                <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Recordatorio: vencimiento de oferta</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">EXP-2026-0031 · Cierre de presentaciones mañana a las 10:00 hs</div>
+                            </div>
+                            <span class="badge badge-active">Leída</span>
+                        </div>
+
+                        <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+                            <div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 4 meses · WhatsApp</div>
+                                <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Nueva licitación compatible con tu rubro</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">EXP-2025-0142 · Provisión de materiales de limpieza · Apertura: 15/11/2025</div>
+                            </div>
+                            <span class="badge badge-active">Leída</span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Info WhatsApp -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3>Tu configuración de alertas</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                            <div>
+                                <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">WhatsApp registrado</div>
+                                <div id="notifWhatsapp" style="font-size: 14px; font-weight: 500;">Cargando...</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Alertas activadas para</div>
+                                <div id="notifRubro" style="font-size: 14px; font-weight: 500;">Cargando...</div>
+                            </div>
+                        </div>
+                        <p style="margin: 16px 0 0 0; font-size: 13px; color: var(--gray-4);">
+                            Para modificar tu número o rubro contactá a
+                            <a href="mailto:controldocumentalyproveedores@comodoro.gov.ar" style="color: var(--blue);">controldocumentalyproveedores@comodoro.gov.ar</a>
+                        </p>
                     </div>
                 </div>
 
@@ -1224,6 +1393,28 @@
         }
 
         // ══════════════════════════════════════════════════════════════
+        // NORMATIVA: navega al chat y envía la pregunta
+        // ══════════════════════════════════════════════════════════════
+        function consultarNormativa(pregunta) {
+            window.location.hash = 'chat';
+            // Esperar a que el chat esté visible antes de enviar
+            setTimeout(() => sendMessage(pregunta), 100);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // NOTIFICACIONES: carga datos del proveedor
+        // ══════════════════════════════════════════════════════════════
+        function loadNotificaciones() {
+            const whatsapp = proveedorActual?.whatsapp || '-';
+            const rubro = proveedorActual?.rubro || 'Sin rubro registrado';
+
+            const elWa = document.getElementById('notifWhatsapp');
+            const elRubro = document.getElementById('notifRubro');
+            if (elWa) elWa.textContent = whatsapp !== '-' ? `+${whatsapp.replace(/\D/g, '')}` : 'No registrado';
+            if (elRubro) elRubro.textContent = rubro;
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // CHAT FUNCTIONALITY
         // ══════════════════════════════════════════════════════════════
         let chatHistory = [];
@@ -1384,6 +1575,9 @@
                     break;
                 case 'chat':
                     initChat();
+                    break;
+                case 'notificaciones':
+                    loadNotificaciones();
                     break;
             }
         }
