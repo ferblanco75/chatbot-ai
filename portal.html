@@ -700,15 +700,40 @@
             <div class="page-content">
 
                 <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
-                    <strong>Módulo en desarrollo:</strong> Próximamente podrás presentar ofertas online.
+                    <strong>Módulo en desarrollo:</strong> Próximamente podrás presentar ofertas online. Los datos a continuación son ilustrativos.
                 </div>
 
+                <!-- KPIs de ofertas -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div class="stat-card c-blue">
+                        <div class="stat-val">3</div>
+                        <div class="stat-label">Total presentadas</div>
+                    </div>
+                    <div class="stat-card c-green">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">Adjudicadas</div>
+                    </div>
+                    <div class="stat-card c-gold">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">En evaluación</div>
+                    </div>
+                    <div class="stat-card c-sky">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">No adjudicada</div>
+                    </div>
+                </div>
+
+                <!-- Tabla de ofertas -->
                 <div class="card">
-                    <div class="card-body">
+                    <div class="card-header">
+                        <h3>Historial de ofertas</h3>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Expediente</th>
+                                    <th>Descripción</th>
                                     <th>Fecha Presentación</th>
                                     <th>Monto Ofertado</th>
                                     <th>Estado</th>
@@ -716,13 +741,36 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="4" style="text-align: center; color: var(--gray-4); padding: 40px;">
-                                        No tenés ofertas registradas aún.
-                                    </td>
+                                    <td><strong>EXP-2025-0142</strong></td>
+                                    <td>Provisión de materiales de limpieza</td>
+                                    <td>15/11/2025</td>
+                                    <td>$1.250.000</td>
+                                    <td><span class="badge badge-active">Adjudicada</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>EXP-2026-0031</strong></td>
+                                    <td>Mantenimiento de espacios verdes</td>
+                                    <td>02/02/2026</td>
+                                    <td>$890.000</td>
+                                    <td><span class="badge badge-pending">En evaluación</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>EXP-2025-0098</strong></td>
+                                    <td>Servicio de impresión y fotocopiado</td>
+                                    <td>08/09/2025</td>
+                                    <td>$430.000</td>
+                                    <td><span class="badge badge-inactive">No adjudicada</span></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- CTA -->
+                <div class="alert-banner alert-green" style="margin-top: 24px;">
+                    <strong>¿Querés presentar una oferta?</strong> Revisá las licitaciones abiertas en
+                    <a href="#licitaciones" style="color: inherit; text-decoration: underline;">Licitaciones</a>
+                    o consultá con el <a href="#chat" style="color: inherit; text-decoration: underline;">Asistente IA</a>.
                 </div>
 
             </div>
@@ -808,15 +856,16 @@
         <div id="screen-chat" class="screen">
             <div class="page-header">
                 <h1>Asistente IA</h1>
-                <p>Consultá sobre licitaciones, normativa y procesos</p>
+                <p id="chatSubtitle">Consultá sobre licitaciones, normativa y procesos</p>
             </div>
             <div class="page-content chat-container" style="padding: 0;">
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="chat-input-wrapper">
-                    <div class="chat-quick-actions">
-                        <button class="chip">¿Qué licitaciones hay abiertas?</button>
-                        <button class="chip">¿Cómo me inscribo como proveedor?</button>
-                        <button class="chip">Requisitos para presentar oferta</button>
+                    <div class="chat-quick-actions" id="chatChips">
+                        <button class="chip" data-msg="¿Qué licitaciones hay abiertas para mi rubro?">Licitaciones para mi rubro</button>
+                        <button class="chip" data-msg="¿Cuáles son los requisitos para presentar una oferta?">Requisitos para ofertar</button>
+                        <button class="chip" data-msg="¿Cómo obtengo el pliego de bases y condiciones?">Obtener pliego</button>
+                        <button class="chip" data-msg="¿Qué dice la Ley Compre Chubut?">Ley Compre Chubut</button>
                     </div>
                     <form id="chatForm">
                         <input type="text" id="chatInput" placeholder="Escribí tu consulta..." autocomplete="off">
@@ -1178,6 +1227,7 @@
         // CHAT FUNCTIONALITY
         // ══════════════════════════════════════════════════════════════
         let chatHistory = [];
+        let chatInitialized = false;
 
         function appendMessage(role, content) {
             const messagesDiv = document.getElementById('chatMessages');
@@ -1189,41 +1239,70 @@
             return msgDiv;
         }
 
+        function showTypingIndicator() {
+            const messagesDiv = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.id = 'typingIndicator';
+            div.className = 'chat-message assistant';
+            div.style.cssText = 'color: var(--gray-4); font-style: italic; font-size: 13px;';
+            div.textContent = 'Codi está escribiendo...';
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            document.getElementById('typingIndicator')?.remove();
+        }
+
+        function initChat() {
+            if (chatInitialized) return;
+            chatInitialized = true;
+
+            const nombre = proveedorActual?.razon_social || sessionStorage.getItem('proveedor_data') && JSON.parse(sessionStorage.getItem('proveedor_data')).nombre || 'proveedor';
+            const rubro = proveedorActual?.rubro;
+
+            // Actualizar subtítulo
+            document.getElementById('chatSubtitle').textContent = `Hablás con Codi · Contexto cargado: ${nombre}`;
+
+            // Mensaje de bienvenida
+            const bienvenida = rubro
+                ? `¡Hola! Soy Codi, el asistente de Compras y Contrataciones de la Municipalidad de Comodoro Rivadavia.\n\nVeo que sos ${nombre} y trabajás en el rubro ${rubro}. Puedo ayudarte a encontrar licitaciones compatibles, entender el proceso de presentación de ofertas o consultar normativa.\n\n¿En qué te ayudo hoy?`
+                : `¡Hola! Soy Codi, el asistente de Compras y Contrataciones de la Municipalidad de Comodoro Rivadavia.\n\nPuedo ayudarte con licitaciones, proceso de inscripción como proveedor, normativa y más.\n\n¿En qué te ayudo hoy?`;
+
+            appendMessage('assistant', bienvenida);
+        }
+
         async function sendMessage(userMessage) {
             if (!userMessage.trim()) return;
 
-            // Añadir mensaje del usuario
             appendMessage('user', userMessage);
             chatHistory.push({role: 'user', content: userMessage});
 
-            // Obtener JWT del sessionStorage
             const token = sessionStorage.getItem('jwt_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            // Headers con JWT opcional
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
+            // Deshabilitar input mientras responde
+            const input = document.getElementById('chatInput');
+            const btn = document.querySelector('#chatForm button');
+            input.disabled = true;
+            btn.disabled = true;
+
+            showTypingIndicator();
 
             try {
-                // Llamada al endpoint con SSE
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify({messages: chatHistory})
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Error ${response.status}`);
 
-                // Crear mensaje del asistente vacío
+                removeTypingIndicator();
                 const assistantDiv = appendMessage('assistant', '');
                 let assistantMessage = '';
 
-                // Leer stream
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
 
@@ -1232,34 +1311,32 @@
                     if (done) break;
 
                     const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
+                    for (const line of chunk.split('\n')) {
                         if (line.startsWith('data: ')) {
                             const data = line.slice(6);
                             if (data === '[DONE]') continue;
-
                             try {
                                 const parsed = JSON.parse(data);
                                 if (parsed.content) {
                                     assistantMessage += parsed.content;
                                     assistantDiv.textContent = assistantMessage;
-                                    // Auto-scroll
                                     assistantDiv.scrollIntoView({behavior: 'smooth', block: 'end'});
                                 }
-                            } catch (e) {
-                                // Ignorar líneas mal formadas
-                            }
+                            } catch (e) {}
                         }
                     }
                 }
 
-                // Guardar en historial
                 chatHistory.push({role: 'assistant', content: assistantMessage});
 
             } catch (error) {
+                removeTypingIndicator();
                 console.error('Error en chat:', error);
                 appendMessage('assistant', 'Lo siento, hubo un error al procesar tu mensaje. Intentá de nuevo.');
+            } finally {
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus();
             }
         }
 
@@ -1305,7 +1382,9 @@
                 case 'licitaciones':
                     loadLicitaciones();
                     break;
-                // chat, ofertas, normativa, notificaciones son estáticas por ahora
+                case 'chat':
+                    initChat();
+                    break;
             }
         }
 
@@ -1353,10 +1432,12 @@
                 }
             });
 
-            // Quick actions
-            document.querySelectorAll('.chat-quick-actions .chip').forEach(chip => {
+            // Chips del chat — usan data-msg si está disponible
+            document.querySelectorAll('#chatChips .chip').forEach(chip => {
                 chip.addEventListener('click', () => {
-                    sendMessage(chip.textContent);
+                    const msg = chip.dataset.msg || chip.textContent;
+                    if (window.location.hash !== '#chat') window.location.hash = 'chat';
+                    sendMessage(msg);
                 });
             });
         });
