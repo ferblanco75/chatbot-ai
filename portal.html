@@ -860,6 +860,11 @@
         // API_URL se carga desde config.js
 
         // ══════════════════════════════════════════════════════════════
+        // ESTADO GLOBAL del proveedor autenticado
+        // ══════════════════════════════════════════════════════════════
+        let proveedorActual = null;
+
+        // ══════════════════════════════════════════════════════════════
         // AUTH: Verificar JWT al cargar
         // ══════════════════════════════════════════════════════════════
         function checkAuth() {
@@ -867,26 +872,44 @@
             const proveedor = sessionStorage.getItem('proveedor_data');
 
             if (!token || !proveedor) {
-                // No hay sesión → redirect a login
                 window.location.href = 'login.html';
                 return;
             }
 
-            // Parsear datos del proveedor
             try {
                 const data = JSON.parse(proveedor);
 
-                // Actualizar UI con datos del usuario
                 document.getElementById('userName').textContent = data.nombre || 'Proveedor';
                 document.getElementById('userCuit').textContent = data.cuit || '--';
 
-                // Avatar con iniciales
                 const iniciales = (data.nombre || 'P').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                 document.getElementById('userAvatar').textContent = iniciales;
 
             } catch (e) {
                 console.error('Error parseando datos del proveedor:', e);
                 logout();
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // PERFIL: Carga datos completos del proveedor desde el backend
+        // ══════════════════════════════════════════════════════════════
+        async function loadPerfilProveedor() {
+            const token = sessionStorage.getItem('jwt_token');
+            try {
+                const res = await fetch(`${API_URL}/proveedores/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                proveedorActual = await res.json();
+
+                // Actualizar sidebar con nombre completo desde backend
+                document.getElementById('userName').textContent = proveedorActual.razon_social || 'Proveedor';
+                document.getElementById('userCuit').textContent = proveedorActual.cuit || '--';
+                const iniciales = (proveedorActual.razon_social || 'P').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                document.getElementById('userAvatar').textContent = iniciales;
+            } catch (e) {
+                console.error('Error cargando perfil:', e);
             }
         }
 
@@ -907,7 +930,7 @@
 
             try {
                 const res = await fetch(`${API_URL}/licitaciones`, {
-                    headers: {'Authorization': `Bearer ${token}`}
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
                 const licitaciones = data.licitaciones || data;
@@ -915,22 +938,49 @@
                 // Filtrar abiertas
                 const abiertas = licitaciones.filter(l => l.estado === 'abierta');
 
+                // Detectar compatibles por rubro del proveedor
+                const rubroProveedor = (proveedorActual?.rubro || '').toLowerCase();
+                const compatibles = rubroProveedor
+                    ? abiertas.filter(l => (l.rubro || '').toLowerCase().includes(rubroProveedor) || rubroProveedor.includes((l.rubro || '').toLowerCase()))
+                    : abiertas;
+
                 // Actualizar KPIs
                 document.getElementById('kpiLicitacionesAbiertas').textContent = abiertas.length;
-                document.getElementById('kpiCompatibles').textContent = abiertas.length;
+                document.getElementById('kpiCompatibles').textContent = compatibles.length;
 
-                // Llenar tabla de licitaciones destacadas (top 5)
+                // Alerta si no hay rubro cargado
+                const dashboardContent = document.querySelector('#screen-dashboard .page-content');
+                const existingAlert = document.getElementById('alertSinRubro');
+                if (!rubroProveedor && !existingAlert) {
+                    const alert = document.createElement('div');
+                    alert.id = 'alertSinRubro';
+                    alert.className = 'alert-banner alert-gold';
+                    alert.style.marginBottom = '24px';
+                    alert.innerHTML = '<strong>Completá tu perfil:</strong> No tenés rubro registrado. Contactá a <a href="mailto:controldocumentalyproveedores@comodoro.gov.ar" style="color: inherit;">la Municipalidad</a> para actualizar tus datos.';
+                    dashboardContent.insertBefore(alert, dashboardContent.firstChild);
+                }
+
+                // Llenar tabla — primero compatibles, luego resto (top 5 en total)
                 const tbody = document.querySelector('#dashboardLicitacionesTable tbody');
                 tbody.innerHTML = '';
 
-                if (abiertas.length === 0) {
+                const ordenadas = [
+                    ...compatibles,
+                    ...abiertas.filter(l => !compatibles.includes(l))
+                ].slice(0, 5);
+
+                if (ordenadas.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--gray-4);">No hay licitaciones abiertas actualmente.</td></tr>';
                 } else {
-                    abiertas.slice(0, 5).forEach(lic => {
+                    ordenadas.forEach(lic => {
+                        const esCompatible = compatibles.includes(lic);
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td><strong>${lic.numero_expediente || 'S/N'}</strong></td>
-                            <td>${lic.titulo}</td>
+                            <td>
+                                ${lic.titulo}
+                                ${esCompatible ? '<span class="badge badge-open" style="margin-left: 8px; font-size: 11px;">Para vos</span>' : ''}
+                            </td>
                             <td>${lic.fecha_apertura || 'A confirmar'}</td>
                             <td><span class="badge badge-open">Abierta</span></td>
                         `;
@@ -1199,9 +1249,12 @@
         // ══════════════════════════════════════════════════════════════
         // INIT
         // ══════════════════════════════════════════════════════════════
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             // Verificar autenticación
             checkAuth();
+
+            // Cargar perfil completo desde el backend antes de renderizar
+            await loadPerfilProveedor();
 
             // Navegar a la screen inicial
             const initialHash = window.location.hash.substring(1) || 'dashboard';
