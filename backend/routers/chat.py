@@ -91,7 +91,7 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
 
 
-@router.post("/")
+@router.post("")
 @limiter.limit("20/minute")  # Máximo 20 mensajes por minuto
 async def chat(
     http_request: Request,
@@ -135,18 +135,17 @@ Tené en cuenta el rubro del proveedor al recomendar licitaciones compatibles.""
         licitaciones_activas=licitaciones_context,
     ) + contexto_proveedor
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client = anthropic.AsyncAnthropic(api_key=api_key)
 
     try:
-        # Generator para streaming SSE
         async def generate_stream() -> AsyncIterator[str]:
-            with client.messages.stream(
-                model="claude-sonnet-4-20250514",
+            async with client.messages.stream(
+                model="claude-sonnet-4-6",
                 max_tokens=700,
                 system=system,
                 messages=[{"role": m.role, "content": m.content} for m in request.messages],
             ) as stream:
-                for text in stream.text_stream:
+                async for text in stream.text_stream:
                     yield f"data: {json.dumps({'content': text})}\n\n"
 
             yield "data: [DONE]\n\n"

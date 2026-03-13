@@ -816,30 +816,47 @@
                 // Llamar al backend
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        messages: chatbotState.conversationHistory
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: chatbotState.conversationHistory })
                 });
 
                 if (!response.ok) {
                     throw new Error(`Error del servidor: ${response.status}`);
                 }
 
-                const data = await response.json();
-
-                // Remover indicador de escritura
+                // Remover indicador de escritura y crear burbuja de respuesta
                 typingIndicator.remove();
+                const botDiv = addMessage('', 'bot');
+                const botBubble = botDiv.querySelector('.message-bubble');
 
-                // Agregar respuesta del bot
-                addMessage(data.content, 'bot');
+                // Leer SSE streaming
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullContent = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    for (const line of chunk.split('\n')) {
+                        if (!line.startsWith('data: ')) continue;
+                        const payload = line.slice(6).trim();
+                        if (payload === '[DONE]') break;
+                        try {
+                            const parsed = JSON.parse(payload);
+                            if (parsed.content) {
+                                fullContent += parsed.content;
+                                botBubble.textContent = fullContent;
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            }
+                        } catch {}
+                    }
+                }
 
                 // Agregar al historial
                 chatbotState.conversationHistory.push({
                     role: 'assistant',
-                    content: data.content
+                    content: fullContent
                 });
 
             } catch (error) {
@@ -886,6 +903,7 @@
 
             // Scroll al último mensaje
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            return messageDiv;
         }
 
         // Manejar clicks en chips
