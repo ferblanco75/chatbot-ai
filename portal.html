@@ -561,11 +561,14 @@
             </div>
             <div class="page-content">
 
+                <!-- Estado de inscripción -->
+                <div id="legajoAlerta"></div>
+
                 <!-- Datos empresa -->
                 <div class="card" style="margin-bottom: 24px;">
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h3>Información de la Empresa</h3>
-                        <span class="badge badge-active">Activo</span>
+                        <span class="badge badge-active" id="legajoEstadoBadge">Activo</span>
                     </div>
                     <div class="card-body">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
@@ -586,7 +589,7 @@
                                 <div id="legajoProvincia" style="font-weight: 500; font-size: 14px;">-</div>
                             </div>
                             <div>
-                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">Rubro</label>
+                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">Rubro habilitado</label>
                                 <div id="legajoRubro" style="font-weight: 500; font-size: 14px;">-</div>
                             </div>
                             <div>
@@ -597,8 +600,19 @@
                     </div>
                 </div>
 
+                <!-- Rubro y licitaciones compatibles -->
+                <div class="card" style="margin-bottom: 24px;" id="legajoRubroCard">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Rubro y compatibilidad</h3>
+                        <a href="#licitaciones" class="btn-ghost" style="font-size: 13px; padding: 6px 12px;">Ver licitaciones</a>
+                    </div>
+                    <div class="card-body">
+                        <div id="legajoRubroDetalle" style="color: var(--gray-4); font-size: 14px;">Cargando...</div>
+                    </div>
+                </div>
+
                 <!-- Documentación -->
-                <div class="card">
+                <div class="card" style="margin-bottom: 24px;">
                     <div class="card-header">
                         <h3>Documentación</h3>
                     </div>
@@ -608,6 +622,13 @@
                         </div>
                         <p style="color: var(--gray-4); margin-top: 16px; font-size: 14px;">Por ahora, enviá tu documentación a: <strong>controldocumentalyproveedores@comodoro.gov.ar</strong></p>
                     </div>
+                </div>
+
+                <!-- CTA Asistente IA -->
+                <div class="alert-banner alert-blue">
+                    <strong>¿Tenés dudas sobre tu legajo o inscripción?</strong>
+                    <a href="#chat" style="color: var(--blue); text-decoration: underline; margin-left: 8px;">Consultá al Asistente IA</a>
+                    &nbsp;o escribí a <strong>controldocumentalyproveedores@comodoro.gov.ar</strong>
                 </div>
 
             </div>
@@ -629,11 +650,18 @@
                         <option value="cerrada">Cerradas</option>
                     </select>
 
-                    <input type="text" id="filterSearch" placeholder="Buscar por expediente o título..."
-                           style="flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--gray-2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="filterParaMi" onchange="filterLicitaciones()" style="accent-color: var(--sky); width: 16px; height: 16px;">
+                        Solo para mí
+                    </label>
 
-                    <button onclick="filterLicitaciones()" class="btn-primary" style="padding: 8px 16px; font-size: 14px;">Filtrar</button>
+                    <input type="text" id="filterSearch" placeholder="Buscar por expediente o título..."
+                           oninput="filterLicitaciones()"
+                           style="flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--gray-2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px;">
                 </div>
+
+                <!-- Contador de resultados -->
+                <div id="licitacionesContador" style="font-size: 13px; color: var(--gray-4); margin-bottom: 12px;"></div>
 
                 <!-- Tabla -->
                 <div class="card">
@@ -643,6 +671,7 @@
                                 <tr>
                                     <th>Expediente</th>
                                     <th>Título</th>
+                                    <th>Rubro</th>
                                     <th>Fecha Apertura</th>
                                     <th>Estado</th>
                                     <th>Acciones</th>
@@ -650,7 +679,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--gray-4);">
+                                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--gray-4);">
                                         Cargando licitaciones...
                                     </td>
                                 </tr>
@@ -1002,10 +1031,10 @@
             const token = sessionStorage.getItem('jwt_token');
 
             try {
-                const res = await fetch(`${API_URL}/proveedores/me`, {
-                    headers: {'Authorization': `Bearer ${token}`}
-                });
-                const proveedor = await res.json();
+                // Usar perfil ya cargado o pedirlo de nuevo
+                const proveedor = proveedorActual || await fetch(`${API_URL}/proveedores/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(r => r.json());
 
                 document.getElementById('legajoCuit').textContent = proveedor.cuit || '-';
                 document.getElementById('legajoRazonSocial').textContent = proveedor.razon_social || '-';
@@ -1013,6 +1042,36 @@
                 document.getElementById('legajoProvincia').textContent = proveedor.provincia || 'No especificado';
                 document.getElementById('legajoRubro').textContent = proveedor.rubro || 'No especificado';
                 document.getElementById('legajoWhatsapp').textContent = proveedor.whatsapp || 'No especificado';
+
+                // Alerta si datos incompletos
+                const alertaEl = document.getElementById('legajoAlerta');
+                if (!proveedor.rubro || !proveedor.whatsapp) {
+                    alertaEl.innerHTML = `<div class="alert-banner alert-gold" style="margin-bottom: 24px;">
+                        <strong>Datos incompletos:</strong> Tu perfil no tiene ${!proveedor.rubro ? 'rubro' : ''}${!proveedor.rubro && !proveedor.whatsapp ? ' ni ' : ''}${!proveedor.whatsapp ? 'WhatsApp' : ''} registrado.
+                        Contactá a <a href="mailto:controldocumentalyproveedores@comodoro.gov.ar" style="color: inherit; text-decoration: underline;">la Municipalidad</a> para actualizarlo.
+                    </div>`;
+                } else {
+                    alertaEl.innerHTML = '';
+                }
+
+                // Detalle de rubro con licitaciones compatibles
+                const rubroDetalle = document.getElementById('legajoRubroDetalle');
+                if (proveedor.rubro) {
+                    // Contar compatibles de las licitaciones ya cargadas
+                    const compatibles = allLicitaciones.filter(l =>
+                        l.estado === 'abierta' &&
+                        (l.rubro || '').toLowerCase().includes(proveedor.rubro.toLowerCase())
+                    );
+                    rubroDetalle.innerHTML = `
+                        <p style="margin: 0 0 12px 0;">Estás habilitado para participar en licitaciones del rubro <strong>${proveedor.rubro}</strong>.</p>
+                        <p style="margin: 0; color: var(--green); font-weight: 500;">
+                            ${compatibles.length > 0
+                                ? `Hay ${compatibles.length} licitación${compatibles.length > 1 ? 'es' : ''} abierta${compatibles.length > 1 ? 's' : ''} compatible${compatibles.length > 1 ? 's' : ''} con tu rubro.`
+                                : 'No hay licitaciones abiertas compatibles con tu rubro en este momento.'}
+                        </p>`;
+                } else {
+                    rubroDetalle.innerHTML = '<p style="margin: 0; color: var(--gray-4);">No tenés rubro registrado. No podemos determinar compatibilidad con licitaciones.</p>';
+                }
 
             } catch (error) {
                 console.error('Error cargando legajo:', error);
@@ -1043,17 +1102,28 @@
             }
         }
 
+        function esCompatible(licitacion) {
+            const rubro = (proveedorActual?.rubro || '').toLowerCase();
+            if (!rubro) return false;
+            const rubroLic = (licitacion.rubro || '').toLowerCase();
+            return rubroLic.includes(rubro) || rubro.includes(rubroLic);
+        }
+
         function renderLicitaciones(licitaciones) {
             const tbody = document.querySelector('#licitacionesTable tbody');
             tbody.innerHTML = '';
 
+            const contador = document.getElementById('licitacionesContador');
+            if (contador) contador.textContent = `${licitaciones.length} licitación${licitaciones.length !== 1 ? 'es' : ''} encontrada${licitaciones.length !== 1 ? 's' : ''}`;
+
             if (licitaciones.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--gray-4);">No se encontraron licitaciones.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--gray-4);">No se encontraron licitaciones.</td></tr>';
                 return;
             }
 
             licitaciones.forEach(lic => {
                 const tr = document.createElement('tr');
+                const compatible = esCompatible(lic);
 
                 const estadoBadge = lic.estado === 'abierta'
                     ? '<span class="badge badge-open">Abierta</span>'
@@ -1061,11 +1131,17 @@
 
                 tr.innerHTML = `
                     <td><strong>${lic.numero_expediente || 'S/N'}</strong></td>
-                    <td>${lic.titulo}</td>
+                    <td>
+                        ${lic.titulo}
+                        ${compatible ? '<span class="badge badge-open" style="margin-left: 8px; font-size: 11px;">Para vos</span>' : ''}
+                    </td>
+                    <td style="font-size: 13px; color: var(--gray-4);">${lic.rubro || '-'}</td>
                     <td>${lic.fecha_apertura || 'A confirmar'}</td>
                     <td>${estadoBadge}</td>
                     <td>
-                        ${lic.url_pliego ? `<a href="${lic.url_pliego}" target="_blank" class="btn-ghost" style="font-size: 12px; padding: 4px 8px;">Ver pliego</a>` : '-'}
+                        ${lic.url_pliego
+                            ? `<a href="${lic.url_pliego}" target="_blank" class="btn-ghost" style="font-size: 12px; padding: 4px 8px;">Ver pliego</a>`
+                            : '<span style="color: var(--gray-4); font-size: 13px;">-</span>'}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1075,6 +1151,7 @@
         function filterLicitaciones() {
             const estado = document.getElementById('filterEstado').value;
             const search = document.getElementById('filterSearch').value.toLowerCase();
+            const soloParaMi = document.getElementById('filterParaMi')?.checked;
 
             let filtered = allLicitaciones;
 
@@ -1082,10 +1159,15 @@
                 filtered = filtered.filter(l => l.estado === estado);
             }
 
+            if (soloParaMi) {
+                filtered = filtered.filter(l => esCompatible(l));
+            }
+
             if (search) {
                 filtered = filtered.filter(l =>
                     (l.numero_expediente && l.numero_expediente.toLowerCase().includes(search)) ||
-                    (l.titulo && l.titulo.toLowerCase().includes(search))
+                    (l.titulo && l.titulo.toLowerCase().includes(search)) ||
+                    (l.rubro && l.rubro.toLowerCase().includes(search))
                 );
             }
 
