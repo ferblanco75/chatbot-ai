@@ -977,12 +977,12 @@
         <div id="screen-notificaciones" class="screen">
             <div class="page-header">
                 <h1>Notificaciones</h1>
-                <p>Historial de alertas recibidas por WhatsApp</p>
+                <p>Historial de alertas recibidas por email</p>
             </div>
             <div class="page-content">
 
                 <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
-                    <strong>Alertas por WhatsApp:</strong> Cuando haya licitaciones compatibles con tu rubro, recibirás una notificación automática en tu WhatsApp registrado.
+                    <strong>Alertas por email:</strong> Cuando haya licitaciones compatibles con tu rubro, recibirás una notificación automática en tu email registrado.
                 </div>
 
                 <!-- KPIs -->
@@ -1011,7 +1011,7 @@
 
                         <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
                             <div>
-                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 3 días · WhatsApp</div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 3 días · Email</div>
                                 <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Nueva licitación compatible con tu rubro</div>
                                 <div style="font-size: 13px; color: var(--gray-4);">EXP-2026-0031 · Mantenimiento de espacios verdes · Apertura: 20/03/2026</div>
                             </div>
@@ -1020,7 +1020,7 @@
 
                         <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
                             <div>
-                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 2 semanas · WhatsApp</div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 2 semanas · Email</div>
                                 <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Recordatorio: vencimiento de oferta</div>
                                 <div style="font-size: 13px; color: var(--gray-4);">EXP-2026-0031 · Cierre de presentaciones mañana a las 10:00 hs</div>
                             </div>
@@ -1029,7 +1029,7 @@
 
                         <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
                             <div>
-                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 4 meses · WhatsApp</div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 4 meses · Email</div>
                                 <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Nueva licitación compatible con tu rubro</div>
                                 <div style="font-size: 13px; color: var(--gray-4);">EXP-2025-0142 · Provisión de materiales de limpieza · Apertura: 15/11/2025</div>
                             </div>
@@ -1047,8 +1047,8 @@
                     <div class="card-body">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                             <div>
-                                <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">WhatsApp registrado</div>
-                                <div id="notifWhatsapp" style="font-size: 14px; font-weight: 500;">Cargando...</div>
+                                <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Email registrado</div>
+                                <div id="notifEmail" style="font-size: 14px; font-weight: 500;">Cargando...</div>
                             </div>
                             <div>
                                 <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Alertas activadas para</div>
@@ -1056,7 +1056,7 @@
                             </div>
                         </div>
                         <p style="margin: 16px 0 0 0; font-size: 13px; color: var(--gray-4);">
-                            Para modificar tu número o rubro contactá a
+                            Para modificar tu email o rubro contactá a
                             <a href="mailto:controldocumentalyproveedores@comodoro.gov.ar" style="color: var(--blue);">controldocumentalyproveedores@comodoro.gov.ar</a>
                         </p>
                     </div>
@@ -1123,6 +1123,20 @@
                 return;
             }
 
+            // Verificar expiración del JWT decodificando el payload (sin verificar firma)
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.exp && Date.now() / 1000 > payload.exp) {
+                    console.warn('JWT expirado, redirigiendo al login');
+                    logout();
+                    return;
+                }
+            } catch (e) {
+                console.error('JWT malformado:', e);
+                logout();
+                return;
+            }
+
             try {
                 const data = JSON.parse(proveedor);
 
@@ -1137,6 +1151,18 @@
                 logout();
             }
         }
+
+        // Recheck de expiración cada 5 minutos mientras el portal está abierto
+        setInterval(() => {
+            const token = sessionStorage.getItem('jwt_token');
+            if (!token) return;
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.exp && Date.now() / 1000 > payload.exp) {
+                    logout();
+                }
+            } catch (e) { logout(); }
+        }, 5 * 60 * 1000);
 
         // ══════════════════════════════════════════════════════════════
         // PERFIL: Carga datos completos del proveedor desde el backend
@@ -1405,12 +1431,12 @@
         // NOTIFICACIONES: carga datos del proveedor
         // ══════════════════════════════════════════════════════════════
         function loadNotificaciones() {
-            const whatsapp = proveedorActual?.whatsapp || '-';
+            const email = proveedorActual?.email || '-';
             const rubro = proveedorActual?.rubro || 'Sin rubro registrado';
 
-            const elWa = document.getElementById('notifWhatsapp');
+            const elEmail = document.getElementById('notifEmail');
             const elRubro = document.getElementById('notifRubro');
-            if (elWa) elWa.textContent = whatsapp !== '-' ? `+${whatsapp.replace(/\D/g, '')}` : 'No registrado';
+            if (elEmail) elEmail.textContent = email !== '-' ? email : 'No registrado';
             if (elRubro) elRubro.textContent = rubro;
         }
 

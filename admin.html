@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin · AsisteCR+</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="components.css">
+    <script src="config.js"></script>
+    <style>
+        body { background: var(--gray-1); min-height: 100vh; }
+
+        .admin-header {
+            background: var(--navy);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .admin-header h1 {
+            font-family: 'Syne', sans-serif;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .admin-header span {
+            color: rgba(255,255,255,0.5);
+            font-size: 13px;
+        }
+
+        .admin-body {
+            max-width: 860px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-grid .full { grid-column: 1 / -1; }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--navy);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        input, select, textarea {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            border: 1px solid var(--gray-2);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            color: var(--text);
+            background: var(--white);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--sky);
+            box-shadow: 0 0 0 3px rgba(34,120,212,.1);
+        }
+
+        textarea { resize: vertical; min-height: 80px; }
+
+        #login-section { max-width: 400px; margin: 80px auto; }
+
+        .feedback {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .feedback.success { background: var(--green-l); color: var(--green); display: block; }
+        .feedback.error   { background: #FDE8E8; color: var(--red); display: block; }
+
+        .licitaciones-list { margin-top: 40px; }
+
+        .lic-row {
+            background: var(--white);
+            border: 1px solid var(--gray-2);
+            border-radius: var(--radius-sm);
+            padding: 14px 18px;
+            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .lic-title { font-weight: 600; font-size: 14px; color: var(--navy); }
+        .lic-meta  { font-size: 12px; color: var(--gray-4); margin-top: 3px; }
+
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-grid .full { grid-column: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-header">
+        <h1>AsisteCR+ · Panel Admin</h1>
+        <span id="admin-status">No autenticado</span>
+    </div>
+
+    <!-- LOGIN ADMIN -->
+    <div id="login-section" class="admin-body">
+        <div class="card">
+            <div class="card-header"><h3>Acceso Admin</h3></div>
+            <div class="card-body">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="admin-password">Contraseña admin</label>
+                    <input type="password" id="admin-password" placeholder="Ingresá la contraseña">
+                </div>
+                <button class="btn btn-primary" onclick="doLogin()" style="width:100%;">Ingresar</button>
+                <div id="login-feedback" class="feedback"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL PRINCIPAL (oculto hasta login) -->
+    <div id="admin-panel" class="admin-body" style="display:none;">
+
+        <!-- Formulario nueva licitación -->
+        <div class="card" style="margin-bottom: 32px;">
+            <div class="card-header">
+                <h3>Nueva licitación</h3>
+                <span class="badge badge-open">POST /licitaciones</span>
+            </div>
+            <div class="card-body">
+                <form id="form-licitacion" onsubmit="return false;">
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label for="f-titulo">Título *</label>
+                            <input type="text" id="f-titulo" placeholder="Ej: Provisión de materiales de limpieza" required>
+                        </div>
+                        <div class="form-group full">
+                            <label for="f-descripcion">Descripción *</label>
+                            <textarea id="f-descripcion" placeholder="Descripción detallada de la licitación..." required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="f-expediente">N° Expediente</label>
+                            <input type="text" id="f-expediente" placeholder="EXP-2026-XXXX">
+                        </div>
+                        <div class="form-group">
+                            <label for="f-rubro">Rubro *</label>
+                            <input type="text" id="f-rubro" placeholder="Ej: Limpieza, Construcción, Informática" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="f-fecha-apertura">Fecha de apertura *</label>
+                            <input type="date" id="f-fecha-apertura" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="f-presupuesto">Presupuesto oficial ($)</label>
+                            <input type="number" id="f-presupuesto" placeholder="0.00" min="0" step="0.01">
+                        </div>
+                        <div class="form-group full">
+                            <label for="f-url-pliego">URL del pliego</label>
+                            <input type="url" id="f-url-pliego" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-primary" id="btn-crear">Crear licitación</button>
+                    </div>
+                </form>
+                <div id="form-feedback" class="feedback"></div>
+            </div>
+        </div>
+
+        <!-- Lista de licitaciones existentes -->
+        <div class="licitaciones-list">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                <h2 style="font-size:16px; color:var(--navy);">Licitaciones cargadas</h2>
+                <button class="btn btn-ghost" onclick="loadLicitaciones()" style="font-size:13px;">Actualizar</button>
+            </div>
+            <div id="list-container">
+                <p style="color:var(--gray-4); font-size:13px;">Cargando...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let adminPassword = '';
+
+        function doLogin() {
+            const pwd = document.getElementById('admin-password').value.trim();
+            if (!pwd) return;
+            adminPassword = pwd;
+
+            // Verificar haciendo una llamada real al backend
+            fetch(`${API_URL}/licitaciones`, {
+                headers: { 'X-Admin-Password': adminPassword }
+            })
+            .then(r => {
+                if (r.ok) {
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('admin-panel').style.display = 'block';
+                    document.getElementById('admin-status').textContent = 'Autenticado';
+                    loadLicitaciones();
+                } else {
+                    showFeedback('login-feedback', 'Contraseña incorrecta.', 'error');
+                }
+            })
+            .catch(() => showFeedback('login-feedback', 'No se pudo conectar al backend.', 'error'));
+        }
+
+        document.getElementById('admin-password').addEventListener('keydown', e => {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        document.getElementById('form-licitacion').addEventListener('submit', async () => {
+            const btn = document.getElementById('btn-crear');
+            btn.disabled = true;
+            btn.textContent = 'Creando...';
+
+            const body = {
+                titulo:               document.getElementById('f-titulo').value.trim(),
+                descripcion:          document.getElementById('f-descripcion').value.trim(),
+                numero_expediente:    document.getElementById('f-expediente').value.trim() || null,
+                rubro:                document.getElementById('f-rubro').value.trim(),
+                fecha_apertura:       document.getElementById('f-fecha-apertura').value,
+                presupuesto_oficial:  parseFloat(document.getElementById('f-presupuesto').value) || null,
+                url_pliego:           document.getElementById('f-url-pliego').value.trim() || null,
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/licitaciones`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showFeedback('form-feedback', `Licitación creada: ${data.id}`, 'success');
+                    document.getElementById('form-licitacion').reset();
+                    loadLicitaciones();
+                } else {
+                    const msg = data.detail?.error || data.detail || 'Error al crear la licitación';
+                    showFeedback('form-feedback', msg, 'error');
+                }
+            } catch (e) {
+                showFeedback('form-feedback', 'Error de conexión con el backend.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Crear licitación';
+            }
+        });
+
+        async function loadLicitaciones() {
+            const container = document.getElementById('list-container');
+            try {
+                const res = await fetch(`${API_URL}/licitaciones`);
+                const licitaciones = await res.json();
+
+                if (!licitaciones.length) {
+                    container.innerHTML = '<p style="color:var(--gray-4); font-size:13px;">No hay licitaciones cargadas.</p>';
+                    return;
+                }
+
+                container.innerHTML = licitaciones.map(l => `
+                    <div class="lic-row">
+                        <div>
+                            <div class="lic-title">${l.titulo}</div>
+                            <div class="lic-meta">
+                                ${l.id} · ${l.rubro} · Apertura: ${l.fecha_apertura}
+                                ${l.presupuesto_oficial ? ` · $${l.presupuesto_oficial.toLocaleString('es-AR')}` : ''}
+                            </div>
+                        </div>
+                        <span class="badge ${l.estado === 'abierta' ? 'badge-open' : 'badge-closed'}">${l.estado}</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<p style="color:var(--red); font-size:13px;">Error al cargar licitaciones.</p>';
+            }
+        }
+
+        function showFeedback(id, msg, type) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.className = `feedback ${type}`;
+            setTimeout(() => { el.className = 'feedback'; }, 5000);
+        }
+    </script>
+</body>
+</html>
