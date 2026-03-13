@@ -449,7 +449,7 @@
                  ═══════════════════════════════════════════════════════════════ -->
             <div id="screen-request" class="screen active">
                 <h2>Acceso con CUIT</h2>
-                <p>Ingresá tu CUIT para recibir un código de acceso por WhatsApp.</p>
+                <p>Ingresá tu CUIT para recibir un código de acceso por email.</p>
 
                 <!-- Alert de errores -->
                 <div id="alert-request" class="alert alert-error">
@@ -485,7 +485,7 @@
                  ═══════════════════════════════════════════════════════════════ -->
             <div id="screen-verify" class="screen">
                 <h2>Verificar código</h2>
-                <p>Te enviamos un código de 6 caracteres a tu WhatsApp <strong id="whatsapp-masked"></strong>.</p>
+                <p>Te enviamos un código de 6 caracteres a tu email <strong id="email-masked"></strong>.</p>
 
                 <!-- Alert de errores -->
                 <div id="alert-verify" class="alert alert-error">
@@ -501,7 +501,7 @@
                     <span class="alert-icon">✓</span>
                     <div class="alert-content">
                         <div class="alert-title">Código enviado</div>
-                        <div class="alert-text">Revisá tu WhatsApp. El código es válido por 30 minutos.</div>
+                        <div class="alert-text">Revisá tu email. El código es válido por 30 minutos.</div>
                     </div>
                 </div>
 
@@ -516,7 +516,7 @@
                             <input type="text" class="otp-digit" maxlength="1" data-index="4" autocomplete="off">
                             <input type="text" class="otp-digit" maxlength="1" data-index="5" autocomplete="off">
                         </div>
-                        <div class="form-hint">Ingresá el código de 6 caracteres que recibiste por WhatsApp</div>
+                        <div class="form-hint">Ingresá el código de 6 caracteres que recibiste por email</div>
                     </div>
 
                     <!-- Timer de expiración -->
@@ -863,7 +863,7 @@
                 }
 
                 // Éxito: mostrar pantalla de verificación
-                document.getElementById('whatsapp-masked').textContent = data.whatsapp || '****';
+                document.getElementById('email-masked').textContent = data.email || '***@***';
                 showScreen('verify');
 
                 // Inicializar inputs OTP

@@ -119,6 +119,115 @@
             line-height: 1.8;
         }
 
+        /* Banner CTA Asistente IA */
+        .cta-banner {
+            background: linear-gradient(135deg, var(--azul-marino) 0%, var(--azul) 100%);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 16px var(--sombra-fuerte);
+        }
+
+        .cta-avatar {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .cta-avatar img {
+            width: 32px;
+            height: 32px;
+        }
+
+        .cta-text {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .cta-text strong {
+            color: var(--blanco);
+            font-size: 0.95rem;
+        }
+
+        .cta-text span {
+            color: rgba(255,255,255,0.75);
+            font-size: 0.82rem;
+        }
+
+        .cta-btn {
+            background: var(--dorado);
+            color: var(--azul-marino);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+
+        .cta-btn:hover { opacity: 0.9; }
+
+        /* Feature cards */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .feature-card {
+            background: var(--blanco);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px var(--sombra);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px var(--sombra-fuerte);
+            border-color: var(--azul);
+        }
+
+        .feature-icon {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .feature-title {
+            color: var(--azul-marino);
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .feature-desc {
+            color: var(--gris-texto);
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 600px) {
+            .cta-banner { flex-wrap: wrap; }
+            .cta-btn { width: 100%; text-align: center; }
+        }
+
         /* Widget Chatbot - FAB (Floating Action Button) */
         #chatbot-fab {
             position: fixed;
@@ -502,30 +611,51 @@
             </a>
         </div>
 
-        <div class="section">
-            <h2>Bienvenido al Portal de Compras</h2>
-            <p>
-                Este portal te permite acceder a toda la información sobre licitaciones públicas,
-                inscripción en el padrón de proveedores, consultar ofertas vigentes y conocer
-                la normativa local (Ley II N°76 - Contrataciones Provinciales, Ley N°4829 - Compre Chubut).
-            </p>
+        <!-- Banner CTA Asistente IA -->
+        <div class="cta-banner">
+            <div class="cta-avatar">
+                <img src="assets/codi-avatar.svg" alt="Codi" onerror="this.style.display='none';this.parentElement.innerHTML='🤖'">
+            </div>
+            <div class="cta-text">
+                <strong>¿Tenés dudas sobre licitaciones o inscripción?</strong>
+                <span>Codi, el asistente IA de compras, responde al instante.</span>
+            </div>
+            <button class="cta-btn" onclick="document.getElementById('chatbot-fab').click()">
+                Consultá a Codi
+            </button>
+        </div>
+
+        <!-- Feature cards -->
+        <div class="feature-grid">
+            <div class="feature-card" onclick="document.getElementById('chatbot-fab').click(); setTimeout(()=>{ document.getElementById('chat-input').value='¿Cómo me inscribo como proveedor?'; document.getElementById('chat-send').click(); }, 600)">
+                <div class="feature-icon">📋</div>
+                <div class="feature-title">Inscripción de proveedores</div>
+                <div class="feature-desc">Conocé los requisitos, documentación y pasos para inscribirte en el padrón municipal.</div>
+            </div>
+            <div class="feature-card" onclick="document.getElementById('chatbot-fab').click(); setTimeout(()=>{ document.getElementById('chat-input').value='¿Cuáles son las licitaciones vigentes?'; document.getElementById('chat-send').click(); }, 600)">
+                <div class="feature-icon">📄</div>
+                <div class="feature-title">Licitaciones vigentes</div>
+                <div class="feature-desc">Consultá las licitaciones públicas activas y los plazos de presentación de ofertas.</div>
+            </div>
+            <div class="feature-card" onclick="document.getElementById('chatbot-fab').click(); setTimeout(()=>{ document.getElementById('chat-input').value='¿Cómo presento una oferta?'; document.getElementById('chat-send').click(); }, 600)">
+                <div class="feature-icon">💼</div>
+                <div class="feature-title">Presentación de ofertas</div>
+                <div class="feature-desc">Aprendé cómo armar el sobre, qué documentación incluir y dónde presentarlo.</div>
+            </div>
+            <div class="feature-card" onclick="document.getElementById('chatbot-fab').click(); setTimeout(()=>{ document.getElementById('chat-input').value='¿Qué es la Ley Compre Chubut?'; document.getElementById('chat-send').click(); }, 600)">
+                <div class="feature-icon">⚖️</div>
+                <div class="feature-title">Normativa aplicable</div>
+                <div class="feature-desc">Ley II N°76, Ley N°4829 Compre Chubut y Decreto 777/06 explicados en simple.</div>
+            </div>
         </div>
 
         <div class="section">
             <h2>Información de Contacto</h2>
             <p>
-                <strong>Email:</strong> licitacionesyconcursos@comodoro.gov.ar<br>
+                <strong>Licitaciones y Concursos:</strong> licitacionesyconcursos@comodoro.gov.ar<br>
+                <strong>Inscripción de proveedores:</strong> controldocumentalyproveedores@comodoro.gov.ar · WhatsApp 2975819952<br>
                 <strong>Dirección:</strong> Namuncurá 26, Comodoro Rivadavia, Chubut<br>
                 <strong>Horario:</strong> Lunes a Viernes de 8:00 a 14:00 hs
-            </p>
-        </div>
-
-        <div class="section">
-            <h2>Últimas Licitaciones</h2>
-            <p>
-                Consultá las licitaciones públicas vigentes, conocé los pliegos de bases y condiciones,
-                y accedé a toda la documentación necesaria para participar en los procesos de compras
-                de la Municipalidad de Comodoro Rivadavia.
             </p>
         </div>
     </div>
@@ -686,30 +816,47 @@
                 // Llamar al backend
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        messages: chatbotState.conversationHistory
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: chatbotState.conversationHistory })
                 });
 
                 if (!response.ok) {
                     throw new Error(`Error del servidor: ${response.status}`);
                 }
 
-                const data = await response.json();
-
-                // Remover indicador de escritura
+                // Remover indicador de escritura y crear burbuja de respuesta
                 typingIndicator.remove();
+                const botDiv = addMessage('', 'bot');
+                const botBubble = botDiv.querySelector('.message-bubble');
 
-                // Agregar respuesta del bot
-                addMessage(data.content, 'bot');
+                // Leer SSE streaming
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullContent = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    for (const line of chunk.split('\n')) {
+                        if (!line.startsWith('data: ')) continue;
+                        const payload = line.slice(6).trim();
+                        if (payload === '[DONE]') break;
+                        try {
+                            const parsed = JSON.parse(payload);
+                            if (parsed.content) {
+                                fullContent += parsed.content;
+                                botBubble.textContent = fullContent;
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            }
+                        } catch {}
+                    }
+                }
 
                 // Agregar al historial
                 chatbotState.conversationHistory.push({
                     role: 'assistant',
-                    content: data.content
+                    content: fullContent
                 });
 
             } catch (error) {
@@ -756,6 +903,7 @@
 
             // Scroll al último mensaje
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            return messageDiv;
         }
 
         // Manejar clicks en chips

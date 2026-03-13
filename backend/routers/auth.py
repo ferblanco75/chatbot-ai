@@ -1,8 +1,8 @@
 """
-Router de autenticación passwordless con OTP por WhatsApp.
+Router de autenticación passwordless con OTP por email.
 
 Endpoints:
-- POST /auth/request-code: Envía código OTP por WhatsApp
+- POST /auth/request-code: Envía código OTP por email
 - POST /auth/verify: Valida OTP y retorna JWT
 """
 
@@ -23,7 +23,7 @@ from services.auth_service import (
     store_otp,
     verify_otp
 )
-from services.whatsapp import send_whatsapp_message
+from services.email import send_otp_email
 from middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,8 @@ def find_proveedor(cuit: str) -> Optional[dict]:
         "localidad": row['localidad'],
         "provincia": row['provincia'],
         "rubro": row['rubro'],
-        "whatsapp": row['whatsapp']
+        "whatsapp": str(row.get('whatsapp', '')),
+        "email": str(row.get('email', ''))
     }
 
 
@@ -145,12 +146,12 @@ def find_proveedor(cuit: str) -> Optional[dict]:
 @limiter.limit("3/minute")  # Máximo 3 solicitudes por minuto
 async def request_code(http_request: Request, request: RequestCodeRequest):
     """
-    Solicita un código OTP enviado por WhatsApp.
+    Solicita un código OTP enviado por email.
 
     Flujo:
     1. Busca el proveedor en el CSV por CUIT
     2. Genera código OTP de 6 caracteres
-    3. Envía código por WhatsApp vía Twilio
+    3. Envía código por email vía Resend
     4. Almacena código en memoria con TTL de 30 min
 
     Returns:
@@ -169,42 +170,42 @@ async def request_code(http_request: Request, request: RequestCodeRequest):
             detail="CUIT no encontrado en el padrón de proveedores"
         )
 
+    email = proveedor.get('email', '').strip()
+    if not email or email in ('nan', ''):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El proveedor no tiene email registrado. Contactá a controldocumentalyproveedores@comodoro.gov.ar"
+        )
+
     # Generar código OTP
     otp = generate_otp()
 
-    # Mensaje WhatsApp
-    mensaje = f"""¡Hola {proveedor['razon_social']}!
-
-Tu código de acceso a AsisteCR+ Portal del Proveedor es:
-
-*{otp}*
-
-Este código es válido por 30 minutos.
-
-_Municipalidad de Comodoro Rivadavia_"""
-
-    # Enviar por WhatsApp
+    # Enviar por email
     try:
-        message_sid = await send_whatsapp_message(
-            to=proveedor['whatsapp'],
-            body=mensaje
+        message_id = await send_otp_email(
+            to=email,
+            otp=otp,
+            razon_social=proveedor['razon_social']
         )
-
-        logger.info(f"OTP enviado a {proveedor['razon_social']} (SID: {message_sid})")
+        logger.info(f"OTP enviado a {proveedor['razon_social']} por email (ID: {message_id})")
 
     except Exception as e:
-        logger.error(f"Error al enviar OTP por WhatsApp: {e}")
+        logger.error(f"Error al enviar OTP por email: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error al enviar código por WhatsApp. Intente nuevamente."
+            detail="Error al enviar código por email. Intente nuevamente."
         )
 
     # Almacenar código
     store_otp(cuit=normalize_cuit(request.cuit), otp=otp)
 
+    # Enmascarar email: usuario@dominio.com → usu***@dominio.com
+    partes = email.split('@')
+    email_masked = partes[0][:3] + '***@' + partes[1] if len(partes) == 2 else '***'
+
     return {
-        "message": "Código enviado por WhatsApp",
-        "whatsapp": proveedor['whatsapp'][-4:].rjust(len(proveedor['whatsapp']), '*'),  # Enmascarar número
+        "message": "Código enviado por email",
+        "email": email_masked,
         "expires_in_minutes": 30
     }
 

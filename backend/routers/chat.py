@@ -14,24 +14,32 @@ from middleware.auth import get_optional_user
 from middleware.rate_limit import limiter
 
 router = APIRouter()
-DATA_PATH = Path(__file__).parent.parent / "data" / "licitaciones.json"
+DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_PATH = DATA_DIR / "licitaciones.json"
+KNOWLEDGE_INSCRIPCION_PATH = DATA_DIR / "knowledge_inscripcion.md"
+KNOWLEDGE_LICITACIONES_PATH = DATA_DIR / "knowledge_licitaciones.md"
 
 SYSTEM_PROMPT_BASE = """Sos Codi, el asistente digital oficial de Compras y Contrataciones de la Municipalidad de Comodoro Rivadavia, Chubut, Argentina.
 
 Tu nombre viene de "Comodoro" y tu misión es ayudar a proveedores, empresas y ciudadanos con información sobre licitaciones y contrataciones municipales.
 
-Usás voseo rioplatense, tono amigable y profesional. Respuestas concisas (máx 200 palabras salvo que pidan detalle). Cuando corresponda, presentate como "Codi" al inicio de la conversación.
+Usás voseo rioplatense, tono amigable y profesional. Respuestas concisas (máx 300 palabras salvo que pidan detalle). Cuando corresponda, presentate como "Codi" al inicio de la conversación. Si el usuario pregunta por un proceso paso a paso, guialo en pasos numerados y claros.
 
-CONOCIMIENTO BASE:
-- Inscripción de proveedores: ARCA/Monotributo, IIBB, CBU, habilitación. Email: controldocumentalyproveedores@comodoro.gov.ar | WhatsApp: 2975819952
-- Tipos: Licitación Pública (abierta), Privada (invitados), Directa (montos menores), Subasta Pública
-- Proceso: 1) Obtener pliego en Namuncurá 26 o licitacionesyconcursos@comodoro.gov.ar 2) Leer PBCG + PBCP 3) Sobre cerrado antes de la hora de apertura
-- Normativa: Ley II N°76 (contrataciones), Ley N°4829 (Compre Chubut — preferencia proveedores locales)
-- Contacto: licitacionesyconcursos@comodoro.gov.ar · Namuncurá 26 · días hábiles hasta 12:00 hs del día anterior a apertura
+{conocimiento_inscripcion}
+
+{conocimiento_licitaciones}
 
 {licitaciones_activas}
 
 Si no sabés algo con certeza, referí al contacto oficial. No inventés información normativa."""
+
+
+def _get_knowledge_context(path: Path) -> str:
+    """Carga un archivo de knowledge base y lo retorna como string."""
+    try:
+        return path.read_text(encoding="utf-8")
+    except Exception:
+        return ""
 
 
 def _get_licitaciones_context(rubro_proveedor: Optional[str] = None) -> str:
@@ -83,7 +91,7 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
 
 
-@router.post("/")
+@router.post("")
 @limiter.limit("20/minute")  # Máximo 20 mensajes por minuto
 async def chat(
     http_request: Request,
@@ -100,6 +108,10 @@ async def chat(
     if not api_key:
         raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY no configurada en el servidor")
 
+    # Cargar knowledge bases
+    conocimiento_inscripcion = _get_knowledge_context(KNOWLEDGE_INSCRIPCION_PATH)
+    conocimiento_licitaciones = _get_knowledge_context(KNOWLEDGE_LICITACIONES_PATH)
+
     # Construir context de licitaciones (con rubro si hay usuario autenticado)
     rubro_proveedor = current_user.get('rubro') if current_user else None
     licitaciones_context = _get_licitaciones_context(rubro_proveedor=rubro_proveedor)
@@ -114,23 +126,26 @@ CONTEXTO DEL PROVEEDOR AUTENTICADO:
 - Razón social: {current_user.get('nombre')}
 - Rubro: {current_user.get('rubro')}
 
-Tené en cuenta el rubro del proveedor al recomendar licitaciones."""
+Tené en cuenta el rubro del proveedor al recomendar licitaciones compatibles."""
 
     # System prompt completo
-    system = SYSTEM_PROMPT_BASE.format(licitaciones_activas=licitaciones_context) + contexto_proveedor
+    system = SYSTEM_PROMPT_BASE.format(
+        conocimiento_inscripcion=conocimiento_inscripcion,
+        conocimiento_licitaciones=conocimiento_licitaciones,
+        licitaciones_activas=licitaciones_context,
+    ) + contexto_proveedor
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client = anthropic.AsyncAnthropic(api_key=api_key)
 
     try:
-        # Generator para streaming SSE
         async def generate_stream() -> AsyncIterator[str]:
-            with client.messages.stream(
-                model="claude-sonnet-4-20250514",
+            async with client.messages.stream(
+                model="claude-sonnet-4-6",
                 max_tokens=700,
                 system=system,
                 messages=[{"role": m.role, "content": m.content} for m in request.messages],
             ) as stream:
-                for text in stream.text_stream:
+                async for text in stream.text_stream:
                     yield f"data: {json.dumps({'content': text})}\n\n"
 
             yield "data: [DONE]\n\n"

@@ -561,11 +561,14 @@
             </div>
             <div class="page-content">
 
+                <!-- Estado de inscripción -->
+                <div id="legajoAlerta"></div>
+
                 <!-- Datos empresa -->
                 <div class="card" style="margin-bottom: 24px;">
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h3>Información de la Empresa</h3>
-                        <span class="badge badge-active">Activo</span>
+                        <span class="badge badge-active" id="legajoEstadoBadge">Activo</span>
                     </div>
                     <div class="card-body">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
@@ -586,7 +589,7 @@
                                 <div id="legajoProvincia" style="font-weight: 500; font-size: 14px;">-</div>
                             </div>
                             <div>
-                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">Rubro</label>
+                                <label style="font-size: 12px; color: var(--gray-4); display: block; margin-bottom: 4px;">Rubro habilitado</label>
                                 <div id="legajoRubro" style="font-weight: 500; font-size: 14px;">-</div>
                             </div>
                             <div>
@@ -597,8 +600,19 @@
                     </div>
                 </div>
 
+                <!-- Rubro y licitaciones compatibles -->
+                <div class="card" style="margin-bottom: 24px;" id="legajoRubroCard">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Rubro y compatibilidad</h3>
+                        <a href="#licitaciones" class="btn-ghost" style="font-size: 13px; padding: 6px 12px;">Ver licitaciones</a>
+                    </div>
+                    <div class="card-body">
+                        <div id="legajoRubroDetalle" style="color: var(--gray-4); font-size: 14px;">Cargando...</div>
+                    </div>
+                </div>
+
                 <!-- Documentación -->
-                <div class="card">
+                <div class="card" style="margin-bottom: 24px;">
                     <div class="card-header">
                         <h3>Documentación</h3>
                     </div>
@@ -608,6 +622,13 @@
                         </div>
                         <p style="color: var(--gray-4); margin-top: 16px; font-size: 14px;">Por ahora, enviá tu documentación a: <strong>controldocumentalyproveedores@comodoro.gov.ar</strong></p>
                     </div>
+                </div>
+
+                <!-- CTA Asistente IA -->
+                <div class="alert-banner alert-blue">
+                    <strong>¿Tenés dudas sobre tu legajo o inscripción?</strong>
+                    <a href="#chat" style="color: var(--blue); text-decoration: underline; margin-left: 8px;">Consultá al Asistente IA</a>
+                    &nbsp;o escribí a <strong>controldocumentalyproveedores@comodoro.gov.ar</strong>
                 </div>
 
             </div>
@@ -629,11 +650,18 @@
                         <option value="cerrada">Cerradas</option>
                     </select>
 
-                    <input type="text" id="filterSearch" placeholder="Buscar por expediente o título..."
-                           style="flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--gray-2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="filterParaMi" onchange="filterLicitaciones()" style="accent-color: var(--sky); width: 16px; height: 16px;">
+                        Solo para mí
+                    </label>
 
-                    <button onclick="filterLicitaciones()" class="btn-primary" style="padding: 8px 16px; font-size: 14px;">Filtrar</button>
+                    <input type="text" id="filterSearch" placeholder="Buscar por expediente o título..."
+                           oninput="filterLicitaciones()"
+                           style="flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--gray-2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px;">
                 </div>
+
+                <!-- Contador de resultados -->
+                <div id="licitacionesContador" style="font-size: 13px; color: var(--gray-4); margin-bottom: 12px;"></div>
 
                 <!-- Tabla -->
                 <div class="card">
@@ -643,6 +671,7 @@
                                 <tr>
                                     <th>Expediente</th>
                                     <th>Título</th>
+                                    <th>Rubro</th>
                                     <th>Fecha Apertura</th>
                                     <th>Estado</th>
                                     <th>Acciones</th>
@@ -650,7 +679,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--gray-4);">
+                                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--gray-4);">
                                         Cargando licitaciones...
                                     </td>
                                 </tr>
@@ -671,15 +700,40 @@
             <div class="page-content">
 
                 <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
-                    <strong>Módulo en desarrollo:</strong> Próximamente podrás presentar ofertas online.
+                    <strong>Módulo en desarrollo:</strong> Próximamente podrás presentar ofertas online. Los datos a continuación son ilustrativos.
                 </div>
 
+                <!-- KPIs de ofertas -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div class="stat-card c-blue">
+                        <div class="stat-val">3</div>
+                        <div class="stat-label">Total presentadas</div>
+                    </div>
+                    <div class="stat-card c-green">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">Adjudicadas</div>
+                    </div>
+                    <div class="stat-card c-gold">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">En evaluación</div>
+                    </div>
+                    <div class="stat-card c-sky">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">No adjudicada</div>
+                    </div>
+                </div>
+
+                <!-- Tabla de ofertas -->
                 <div class="card">
-                    <div class="card-body">
+                    <div class="card-header">
+                        <h3>Historial de ofertas</h3>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Expediente</th>
+                                    <th>Descripción</th>
                                     <th>Fecha Presentación</th>
                                     <th>Monto Ofertado</th>
                                     <th>Estado</th>
@@ -687,13 +741,36 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="4" style="text-align: center; color: var(--gray-4); padding: 40px;">
-                                        No tenés ofertas registradas aún.
-                                    </td>
+                                    <td><strong>EXP-2025-0142</strong></td>
+                                    <td>Provisión de materiales de limpieza</td>
+                                    <td>15/11/2025</td>
+                                    <td>$1.250.000</td>
+                                    <td><span class="badge badge-active">Adjudicada</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>EXP-2026-0031</strong></td>
+                                    <td>Mantenimiento de espacios verdes</td>
+                                    <td>02/02/2026</td>
+                                    <td>$890.000</td>
+                                    <td><span class="badge badge-pending">En evaluación</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>EXP-2025-0098</strong></td>
+                                    <td>Servicio de impresión y fotocopiado</td>
+                                    <td>08/09/2025</td>
+                                    <td>$430.000</td>
+                                    <td><span class="badge badge-inactive">No adjudicada</span></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- CTA -->
+                <div class="alert-banner alert-green" style="margin-top: 24px;">
+                    <strong>¿Querés presentar una oferta?</strong> Revisá las licitaciones abiertas en
+                    <a href="#licitaciones" style="color: inherit; text-decoration: underline;">Licitaciones</a>
+                    o consultá con el <a href="#chat" style="color: inherit; text-decoration: underline;">Asistente IA</a>.
                 </div>
 
             </div>
@@ -703,72 +780,170 @@
         <div id="screen-normativa" class="screen">
             <div class="page-header">
                 <h1>Normativa</h1>
-                <p>Marco legal y regulatorio de compras públicas</p>
+                <p>Marco legal y regulatorio de compras públicas municipales</p>
             </div>
             <div class="page-content">
 
                 <!-- CTA al asistente -->
                 <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
-                    <strong>¿Tenés dudas sobre normativa?</strong>
-                    <a href="#chat" style="color: var(--blue); text-decoration: underline; margin-left: 8px;">
-                        Consultá con el Asistente IA
-                    </a>
+                    <strong>¿Tenés dudas sobre normativa o procesos?</strong>
+                    <a href="#chat" data-screen="chat" style="color: var(--blue); text-decoration: underline; margin-left: 8px;">Consultá con Codi, el Asistente IA</a>
                 </div>
 
-                <!-- Grid de documentos -->
-                <div style="display: grid; gap: 16px;">
-
-                    <div class="card">
-                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-                            <div>
-                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Ley II N°76 - Contrataciones del Estado Provincial</h3>
-                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Legislación Chubut</p>
-                            </div>
-                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
-                        </div>
+                <!-- Sección: Leyes y decretos -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3>Leyes y Decretos</h3>
                     </div>
-
-                    <div class="card">
-                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-                            <div>
-                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Ley N°4829 - Compre Chubut</h3>
-                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Preferencia proveedores locales</p>
-                            </div>
-                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
-                        </div>
+                    <div class="card-body" style="padding: 0;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Norma</th>
+                                    <th>Descripción</th>
+                                    <th>Ámbito</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Ley II N°76</strong></td>
+                                    <td>Contrataciones del Estado Provincial de Chubut</td>
+                                    <td><span class="badge badge-open">Provincial</span></td>
+                                    <td>
+                                        <button class="btn-ghost" style="font-size: 12px; padding: 4px 10px;"
+                                            onclick="consultarNormativa('Explicame la Ley II N°76 de Contrataciones del Estado Provincial de Chubut')">
+                                            Consultar IA
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ley N°4829</strong></td>
+                                    <td>Compre Chubut — preferencia a proveedores locales</td>
+                                    <td><span class="badge badge-open">Provincial</span></td>
+                                    <td>
+                                        <button class="btn-ghost" style="font-size: 12px; padding: 4px 10px;"
+                                            onclick="consultarNormativa('¿Qué dice la Ley Compre Chubut N°4829 y cómo me beneficia como proveedor local?')">
+                                            Consultar IA
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Decreto 777/06</strong></td>
+                                    <td>Reglamentación del proceso de contrataciones municipales</td>
+                                    <td><span class="badge badge-pending">Municipal</span></td>
+                                    <td>
+                                        <button class="btn-ghost" style="font-size: 12px; padding: 4px 10px;"
+                                            onclick="consultarNormativa('¿Qué establece el Decreto 777/06 sobre contrataciones municipales?')">
+                                            Consultar IA
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                </div>
 
-                    <div class="card">
-                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-                            <div>
-                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Pliego de Bases y Condiciones Generales (PBCG)</h3>
-                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Condiciones generales de licitación</p>
-                            </div>
-                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
-                        </div>
+                <!-- Sección: Documentos del proceso -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3>Documentos del Proceso Licitatorio</h3>
                     </div>
+                    <div style="display: grid; gap: 1px; background: var(--gray-2);">
 
-                    <div class="card">
-                        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                        <div style="background: var(--white); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
                             <div>
-                                <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--navy);">Guía de Inscripción de Proveedores</h3>
-                                <p style="font-size: 13px; color: var(--gray-4); margin: 0;">Requisitos y documentación</p>
+                                <div style="font-weight: 600; font-size: 14px; color: var(--navy); margin-bottom: 2px;">Pliego de Bases y Condiciones Generales (PBCG)</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">Condiciones comunes a todas las licitaciones municipales</div>
                             </div>
-                            <a href="#" class="btn-primary" style="font-size: 13px; padding: 8px 16px; white-space: nowrap;">Descargar PDF</a>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button class="btn-ghost" style="font-size: 12px; padding: 6px 12px;"
+                                    onclick="consultarNormativa('¿Qué contiene el Pliego de Bases y Condiciones Generales (PBCG) y qué debo tener en cuenta?')">
+                                    Consultar IA
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
+                        <div style="background: var(--white); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px; color: var(--navy); margin-bottom: 2px;">Pliego de Bases y Condiciones Particulares (PBCP)</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">Específico de cada licitación — prevalece sobre el PBCG</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button class="btn-ghost" style="font-size: 12px; padding: 6px 12px;"
+                                    onclick="consultarNormativa('¿Qué es el PBCP y en qué se diferencia del PBCG?')">
+                                    Consultar IA
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="background: var(--white); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px; color: var(--navy); margin-bottom: 2px;">Guía de Inscripción de Proveedores</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">Requisitos, documentación y pasos para inscribirse en el padrón</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button class="btn-ghost" style="font-size: 12px; padding: 6px 12px;"
+                                    onclick="consultarNormativa('¿Cuáles son los pasos y documentos necesarios para inscribirse como proveedor municipal?')">
+                                    Consultar IA
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Sección: Preguntas frecuentes navegables -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3>Preguntas frecuentes</h3>
+                    </div>
+                    <div style="display: grid; gap: 1px; background: var(--gray-2);">
+                        <button onclick="consultarNormativa('¿Cuáles son los tipos de contratación municipal y cuándo se usa cada uno?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Qué tipos de licitación existen? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                        <button onclick="consultarNormativa('¿Cómo armo el sobre para presentar una oferta en una licitación?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Cómo armo el sobre para presentar una oferta? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                        <button onclick="consultarNormativa('¿Qué es la garantía de oferta y cómo se integra?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Qué es la garantía de oferta y cómo se integra? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                        <button onclick="consultarNormativa('¿Cómo funciona el acto de apertura de una licitación y qué pasa después?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Cómo es el acto de apertura y qué sigue después? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                        <button onclick="consultarNormativa('¿Puedo impugnar una adjudicación? ¿Cómo y en qué plazo?')"
+                            style="background: var(--white); border: none; padding: 14px 20px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--navy); display: flex; justify-content: space-between; align-items: center;">
+                            ¿Puedo impugnar una adjudicación? <span style="color: var(--sky);">→ Consultar</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Contacto -->
-                <div class="card" style="margin-top: 24px;">
+                <div class="card">
                     <div class="card-header">
                         <h3>Contacto Oficial</h3>
                     </div>
-                    <div class="card-body">
-                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Email:</strong> licitacionesyconcursos@comodoro.gov.ar</p>
-                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Dirección:</strong> Namuncurá 26, Comodoro Rivadavia</p>
-                        <p style="margin: 0; font-size: 14px;"><strong>Horario:</strong> Lunes a viernes, hasta 12:00 hs del día anterior a apertura</p>
+                    <div class="card-body" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                        <div>
+                            <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Licitaciones y concursos</div>
+                            <div style="font-size: 14px; font-weight: 500;">licitacionesyconcursos@comodoro.gov.ar</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Inscripción de proveedores</div>
+                            <div style="font-size: 14px; font-weight: 500;">controldocumentalyproveedores@comodoro.gov.ar</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Dirección</div>
+                            <div style="font-size: 14px; font-weight: 500;">Namuncurá 26, Comodoro Rivadavia</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Horario</div>
+                            <div style="font-size: 14px; font-weight: 500;">Lunes a viernes hasta 12:00 hs (día anterior a apertura)</div>
+                        </div>
                     </div>
                 </div>
 
@@ -779,15 +954,16 @@
         <div id="screen-chat" class="screen">
             <div class="page-header">
                 <h1>Asistente IA</h1>
-                <p>Consultá sobre licitaciones, normativa y procesos</p>
+                <p id="chatSubtitle">Consultá sobre licitaciones, normativa y procesos</p>
             </div>
             <div class="page-content chat-container" style="padding: 0;">
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="chat-input-wrapper">
-                    <div class="chat-quick-actions">
-                        <button class="chip">¿Qué licitaciones hay abiertas?</button>
-                        <button class="chip">¿Cómo me inscribo como proveedor?</button>
-                        <button class="chip">Requisitos para presentar oferta</button>
+                    <div class="chat-quick-actions" id="chatChips">
+                        <button class="chip" data-msg="¿Qué licitaciones hay abiertas para mi rubro?">Licitaciones para mi rubro</button>
+                        <button class="chip" data-msg="¿Cuáles son los requisitos para presentar una oferta?">Requisitos para ofertar</button>
+                        <button class="chip" data-msg="¿Cómo obtengo el pliego de bases y condiciones?">Obtener pliego</button>
+                        <button class="chip" data-msg="¿Qué dice la Ley Compre Chubut?">Ley Compre Chubut</button>
                     </div>
                     <form id="chatForm">
                         <input type="text" id="chatInput" placeholder="Escribí tu consulta..." autocomplete="off">
@@ -801,17 +977,88 @@
         <div id="screen-notificaciones" class="screen">
             <div class="page-header">
                 <h1>Notificaciones</h1>
-                <p>Historial de alertas y mensajes</p>
+                <p>Historial de alertas recibidas por email</p>
             </div>
             <div class="page-content">
 
+                <div class="alert-banner alert-blue" style="margin-bottom: 24px;">
+                    <strong>Alertas por email:</strong> Cuando haya licitaciones compatibles con tu rubro, recibirás una notificación automática en tu email registrado.
+                </div>
+
+                <!-- KPIs -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div class="stat-card c-blue">
+                        <div class="stat-val">3</div>
+                        <div class="stat-label">Alertas recibidas</div>
+                    </div>
+                    <div class="stat-card c-green">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">Este mes</div>
+                    </div>
+                    <div class="stat-card c-gold">
+                        <div class="stat-val">2</div>
+                        <div class="stat-label">Licitaciones notificadas</div>
+                    </div>
+                </div>
+
+                <!-- Historial -->
                 <div class="card">
-                    <div class="card-body">
-                        <div style="text-align: center; padding: 60px 40px; color: var(--gray-4);">
-                            <div style="font-size: 64px; margin-bottom: 16px;">🔔</div>
-                            <h3 style="font-size: 18px; margin-bottom: 8px; color: var(--navy);">No tenés notificaciones nuevas</h3>
-                            <p style="font-size: 14px; margin: 0;">Cuando haya novedades, las verás acá.</p>
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Historial de alertas</h3>
+                        <span class="badge badge-pending">Datos ilustrativos</span>
+                    </div>
+                    <div style="display: grid; gap: 1px; background: var(--gray-2);">
+
+                        <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+                            <div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 3 días · Email</div>
+                                <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Nueva licitación compatible con tu rubro</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">EXP-2026-0031 · Mantenimiento de espacios verdes · Apertura: 20/03/2026</div>
+                            </div>
+                            <span class="badge badge-active">Leída</span>
                         </div>
+
+                        <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+                            <div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 2 semanas · Email</div>
+                                <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Recordatorio: vencimiento de oferta</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">EXP-2026-0031 · Cierre de presentaciones mañana a las 10:00 hs</div>
+                            </div>
+                            <span class="badge badge-active">Leída</span>
+                        </div>
+
+                        <div style="background: var(--white); padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+                            <div>
+                                <div style="font-size: 13px; color: var(--gray-4); margin-bottom: 4px;">Hace 4 meses · Email</div>
+                                <div style="font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 4px;">Nueva licitación compatible con tu rubro</div>
+                                <div style="font-size: 13px; color: var(--gray-4);">EXP-2025-0142 · Provisión de materiales de limpieza · Apertura: 15/11/2025</div>
+                            </div>
+                            <span class="badge badge-active">Leída</span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Info WhatsApp -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3>Tu configuración de alertas</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                            <div>
+                                <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Email registrado</div>
+                                <div id="notifEmail" style="font-size: 14px; font-weight: 500;">Cargando...</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: var(--gray-4); margin-bottom: 4px;">Alertas activadas para</div>
+                                <div id="notifRubro" style="font-size: 14px; font-weight: 500;">Cargando...</div>
+                            </div>
+                        </div>
+                        <p style="margin: 16px 0 0 0; font-size: 13px; color: var(--gray-4);">
+                            Para modificar tu email o rubro contactá a
+                            <a href="mailto:controldocumentalyproveedores@comodoro.gov.ar" style="color: var(--blue);">controldocumentalyproveedores@comodoro.gov.ar</a>
+                        </p>
                     </div>
                 </div>
 
@@ -860,6 +1107,11 @@
         // API_URL se carga desde config.js
 
         // ══════════════════════════════════════════════════════════════
+        // ESTADO GLOBAL del proveedor autenticado
+        // ══════════════════════════════════════════════════════════════
+        let proveedorActual = null;
+
+        // ══════════════════════════════════════════════════════════════
         // AUTH: Verificar JWT al cargar
         // ══════════════════════════════════════════════════════════════
         function checkAuth() {
@@ -867,26 +1119,70 @@
             const proveedor = sessionStorage.getItem('proveedor_data');
 
             if (!token || !proveedor) {
-                // No hay sesión → redirect a login
                 window.location.href = 'login.html';
                 return;
             }
 
-            // Parsear datos del proveedor
+            // Verificar expiración del JWT decodificando el payload (sin verificar firma)
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.exp && Date.now() / 1000 > payload.exp) {
+                    console.warn('JWT expirado, redirigiendo al login');
+                    logout();
+                    return;
+                }
+            } catch (e) {
+                console.error('JWT malformado:', e);
+                logout();
+                return;
+            }
+
             try {
                 const data = JSON.parse(proveedor);
 
-                // Actualizar UI con datos del usuario
                 document.getElementById('userName').textContent = data.nombre || 'Proveedor';
                 document.getElementById('userCuit').textContent = data.cuit || '--';
 
-                // Avatar con iniciales
                 const iniciales = (data.nombre || 'P').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                 document.getElementById('userAvatar').textContent = iniciales;
 
             } catch (e) {
                 console.error('Error parseando datos del proveedor:', e);
                 logout();
+            }
+        }
+
+        // Recheck de expiración cada 5 minutos mientras el portal está abierto
+        setInterval(() => {
+            const token = sessionStorage.getItem('jwt_token');
+            if (!token) return;
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.exp && Date.now() / 1000 > payload.exp) {
+                    logout();
+                }
+            } catch (e) { logout(); }
+        }, 5 * 60 * 1000);
+
+        // ══════════════════════════════════════════════════════════════
+        // PERFIL: Carga datos completos del proveedor desde el backend
+        // ══════════════════════════════════════════════════════════════
+        async function loadPerfilProveedor() {
+            const token = sessionStorage.getItem('jwt_token');
+            try {
+                const res = await fetch(`${API_URL}/proveedores/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                proveedorActual = await res.json();
+
+                // Actualizar sidebar con nombre completo desde backend
+                document.getElementById('userName').textContent = proveedorActual.razon_social || 'Proveedor';
+                document.getElementById('userCuit').textContent = proveedorActual.cuit || '--';
+                const iniciales = (proveedorActual.razon_social || 'P').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                document.getElementById('userAvatar').textContent = iniciales;
+            } catch (e) {
+                console.error('Error cargando perfil:', e);
             }
         }
 
@@ -907,7 +1203,7 @@
 
             try {
                 const res = await fetch(`${API_URL}/licitaciones`, {
-                    headers: {'Authorization': `Bearer ${token}`}
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
                 const licitaciones = data.licitaciones || data;
@@ -915,22 +1211,49 @@
                 // Filtrar abiertas
                 const abiertas = licitaciones.filter(l => l.estado === 'abierta');
 
+                // Detectar compatibles por rubro del proveedor
+                const rubroProveedor = (proveedorActual?.rubro || '').toLowerCase();
+                const compatibles = rubroProveedor
+                    ? abiertas.filter(l => (l.rubro || '').toLowerCase().includes(rubroProveedor) || rubroProveedor.includes((l.rubro || '').toLowerCase()))
+                    : abiertas;
+
                 // Actualizar KPIs
                 document.getElementById('kpiLicitacionesAbiertas').textContent = abiertas.length;
-                document.getElementById('kpiCompatibles').textContent = abiertas.length;
+                document.getElementById('kpiCompatibles').textContent = compatibles.length;
 
-                // Llenar tabla de licitaciones destacadas (top 5)
+                // Alerta si no hay rubro cargado
+                const dashboardContent = document.querySelector('#screen-dashboard .page-content');
+                const existingAlert = document.getElementById('alertSinRubro');
+                if (!rubroProveedor && !existingAlert) {
+                    const alert = document.createElement('div');
+                    alert.id = 'alertSinRubro';
+                    alert.className = 'alert-banner alert-gold';
+                    alert.style.marginBottom = '24px';
+                    alert.innerHTML = '<strong>Completá tu perfil:</strong> No tenés rubro registrado. Contactá a <a href="mailto:controldocumentalyproveedores@comodoro.gov.ar" style="color: inherit;">la Municipalidad</a> para actualizar tus datos.';
+                    dashboardContent.insertBefore(alert, dashboardContent.firstChild);
+                }
+
+                // Llenar tabla — primero compatibles, luego resto (top 5 en total)
                 const tbody = document.querySelector('#dashboardLicitacionesTable tbody');
                 tbody.innerHTML = '';
 
-                if (abiertas.length === 0) {
+                const ordenadas = [
+                    ...compatibles,
+                    ...abiertas.filter(l => !compatibles.includes(l))
+                ].slice(0, 5);
+
+                if (ordenadas.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--gray-4);">No hay licitaciones abiertas actualmente.</td></tr>';
                 } else {
-                    abiertas.slice(0, 5).forEach(lic => {
+                    ordenadas.forEach(lic => {
+                        const esCompatible = compatibles.includes(lic);
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td><strong>${lic.numero_expediente || 'S/N'}</strong></td>
-                            <td>${lic.titulo}</td>
+                            <td>
+                                ${lic.titulo}
+                                ${esCompatible ? '<span class="badge badge-open" style="margin-left: 8px; font-size: 11px;">Para vos</span>' : ''}
+                            </td>
                             <td>${lic.fecha_apertura || 'A confirmar'}</td>
                             <td><span class="badge badge-open">Abierta</span></td>
                         `;
@@ -952,10 +1275,10 @@
             const token = sessionStorage.getItem('jwt_token');
 
             try {
-                const res = await fetch(`${API_URL}/proveedores/me`, {
-                    headers: {'Authorization': `Bearer ${token}`}
-                });
-                const proveedor = await res.json();
+                // Usar perfil ya cargado o pedirlo de nuevo
+                const proveedor = proveedorActual || await fetch(`${API_URL}/proveedores/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(r => r.json());
 
                 document.getElementById('legajoCuit').textContent = proveedor.cuit || '-';
                 document.getElementById('legajoRazonSocial').textContent = proveedor.razon_social || '-';
@@ -963,6 +1286,36 @@
                 document.getElementById('legajoProvincia').textContent = proveedor.provincia || 'No especificado';
                 document.getElementById('legajoRubro').textContent = proveedor.rubro || 'No especificado';
                 document.getElementById('legajoWhatsapp').textContent = proveedor.whatsapp || 'No especificado';
+
+                // Alerta si datos incompletos
+                const alertaEl = document.getElementById('legajoAlerta');
+                if (!proveedor.rubro || !proveedor.whatsapp) {
+                    alertaEl.innerHTML = `<div class="alert-banner alert-gold" style="margin-bottom: 24px;">
+                        <strong>Datos incompletos:</strong> Tu perfil no tiene ${!proveedor.rubro ? 'rubro' : ''}${!proveedor.rubro && !proveedor.whatsapp ? ' ni ' : ''}${!proveedor.whatsapp ? 'WhatsApp' : ''} registrado.
+                        Contactá a <a href="mailto:controldocumentalyproveedores@comodoro.gov.ar" style="color: inherit; text-decoration: underline;">la Municipalidad</a> para actualizarlo.
+                    </div>`;
+                } else {
+                    alertaEl.innerHTML = '';
+                }
+
+                // Detalle de rubro con licitaciones compatibles
+                const rubroDetalle = document.getElementById('legajoRubroDetalle');
+                if (proveedor.rubro) {
+                    // Contar compatibles de las licitaciones ya cargadas
+                    const compatibles = allLicitaciones.filter(l =>
+                        l.estado === 'abierta' &&
+                        (l.rubro || '').toLowerCase().includes(proveedor.rubro.toLowerCase())
+                    );
+                    rubroDetalle.innerHTML = `
+                        <p style="margin: 0 0 12px 0;">Estás habilitado para participar en licitaciones del rubro <strong>${proveedor.rubro}</strong>.</p>
+                        <p style="margin: 0; color: var(--green); font-weight: 500;">
+                            ${compatibles.length > 0
+                                ? `Hay ${compatibles.length} licitación${compatibles.length > 1 ? 'es' : ''} abierta${compatibles.length > 1 ? 's' : ''} compatible${compatibles.length > 1 ? 's' : ''} con tu rubro.`
+                                : 'No hay licitaciones abiertas compatibles con tu rubro en este momento.'}
+                        </p>`;
+                } else {
+                    rubroDetalle.innerHTML = '<p style="margin: 0; color: var(--gray-4);">No tenés rubro registrado. No podemos determinar compatibilidad con licitaciones.</p>';
+                }
 
             } catch (error) {
                 console.error('Error cargando legajo:', error);
@@ -993,17 +1346,28 @@
             }
         }
 
+        function esCompatible(licitacion) {
+            const rubro = (proveedorActual?.rubro || '').toLowerCase();
+            if (!rubro) return false;
+            const rubroLic = (licitacion.rubro || '').toLowerCase();
+            return rubroLic.includes(rubro) || rubro.includes(rubroLic);
+        }
+
         function renderLicitaciones(licitaciones) {
             const tbody = document.querySelector('#licitacionesTable tbody');
             tbody.innerHTML = '';
 
+            const contador = document.getElementById('licitacionesContador');
+            if (contador) contador.textContent = `${licitaciones.length} licitación${licitaciones.length !== 1 ? 'es' : ''} encontrada${licitaciones.length !== 1 ? 's' : ''}`;
+
             if (licitaciones.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--gray-4);">No se encontraron licitaciones.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--gray-4);">No se encontraron licitaciones.</td></tr>';
                 return;
             }
 
             licitaciones.forEach(lic => {
                 const tr = document.createElement('tr');
+                const compatible = esCompatible(lic);
 
                 const estadoBadge = lic.estado === 'abierta'
                     ? '<span class="badge badge-open">Abierta</span>'
@@ -1011,11 +1375,17 @@
 
                 tr.innerHTML = `
                     <td><strong>${lic.numero_expediente || 'S/N'}</strong></td>
-                    <td>${lic.titulo}</td>
+                    <td>
+                        ${lic.titulo}
+                        ${compatible ? '<span class="badge badge-open" style="margin-left: 8px; font-size: 11px;">Para vos</span>' : ''}
+                    </td>
+                    <td style="font-size: 13px; color: var(--gray-4);">${lic.rubro || '-'}</td>
                     <td>${lic.fecha_apertura || 'A confirmar'}</td>
                     <td>${estadoBadge}</td>
                     <td>
-                        ${lic.url_pliego ? `<a href="${lic.url_pliego}" target="_blank" class="btn-ghost" style="font-size: 12px; padding: 4px 8px;">Ver pliego</a>` : '-'}
+                        ${lic.url_pliego
+                            ? `<a href="${lic.url_pliego}" target="_blank" class="btn-ghost" style="font-size: 12px; padding: 4px 8px;">Ver pliego</a>`
+                            : '<span style="color: var(--gray-4); font-size: 13px;">-</span>'}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1025,6 +1395,7 @@
         function filterLicitaciones() {
             const estado = document.getElementById('filterEstado').value;
             const search = document.getElementById('filterSearch').value.toLowerCase();
+            const soloParaMi = document.getElementById('filterParaMi')?.checked;
 
             let filtered = allLicitaciones;
 
@@ -1032,10 +1403,15 @@
                 filtered = filtered.filter(l => l.estado === estado);
             }
 
+            if (soloParaMi) {
+                filtered = filtered.filter(l => esCompatible(l));
+            }
+
             if (search) {
                 filtered = filtered.filter(l =>
                     (l.numero_expediente && l.numero_expediente.toLowerCase().includes(search)) ||
-                    (l.titulo && l.titulo.toLowerCase().includes(search))
+                    (l.titulo && l.titulo.toLowerCase().includes(search)) ||
+                    (l.rubro && l.rubro.toLowerCase().includes(search))
                 );
             }
 
@@ -1043,9 +1419,32 @@
         }
 
         // ══════════════════════════════════════════════════════════════
+        // NORMATIVA: navega al chat y envía la pregunta
+        // ══════════════════════════════════════════════════════════════
+        function consultarNormativa(pregunta) {
+            window.location.hash = 'chat';
+            // Esperar a que el chat esté visible antes de enviar
+            setTimeout(() => sendMessage(pregunta), 100);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // NOTIFICACIONES: carga datos del proveedor
+        // ══════════════════════════════════════════════════════════════
+        function loadNotificaciones() {
+            const email = proveedorActual?.email || '-';
+            const rubro = proveedorActual?.rubro || 'Sin rubro registrado';
+
+            const elEmail = document.getElementById('notifEmail');
+            const elRubro = document.getElementById('notifRubro');
+            if (elEmail) elEmail.textContent = email !== '-' ? email : 'No registrado';
+            if (elRubro) elRubro.textContent = rubro;
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // CHAT FUNCTIONALITY
         // ══════════════════════════════════════════════════════════════
         let chatHistory = [];
+        let chatInitialized = false;
 
         function appendMessage(role, content) {
             const messagesDiv = document.getElementById('chatMessages');
@@ -1057,41 +1456,70 @@
             return msgDiv;
         }
 
+        function showTypingIndicator() {
+            const messagesDiv = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.id = 'typingIndicator';
+            div.className = 'chat-message assistant';
+            div.style.cssText = 'color: var(--gray-4); font-style: italic; font-size: 13px;';
+            div.textContent = 'Codi está escribiendo...';
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            document.getElementById('typingIndicator')?.remove();
+        }
+
+        function initChat() {
+            if (chatInitialized) return;
+            chatInitialized = true;
+
+            const nombre = proveedorActual?.razon_social || sessionStorage.getItem('proveedor_data') && JSON.parse(sessionStorage.getItem('proveedor_data')).nombre || 'proveedor';
+            const rubro = proveedorActual?.rubro;
+
+            // Actualizar subtítulo
+            document.getElementById('chatSubtitle').textContent = `Hablás con Codi · Contexto cargado: ${nombre}`;
+
+            // Mensaje de bienvenida
+            const bienvenida = rubro
+                ? `¡Hola! Soy Codi, el asistente de Compras y Contrataciones de la Municipalidad de Comodoro Rivadavia.\n\nVeo que sos ${nombre} y trabajás en el rubro ${rubro}. Puedo ayudarte a encontrar licitaciones compatibles, entender el proceso de presentación de ofertas o consultar normativa.\n\n¿En qué te ayudo hoy?`
+                : `¡Hola! Soy Codi, el asistente de Compras y Contrataciones de la Municipalidad de Comodoro Rivadavia.\n\nPuedo ayudarte con licitaciones, proceso de inscripción como proveedor, normativa y más.\n\n¿En qué te ayudo hoy?`;
+
+            appendMessage('assistant', bienvenida);
+        }
+
         async function sendMessage(userMessage) {
             if (!userMessage.trim()) return;
 
-            // Añadir mensaje del usuario
             appendMessage('user', userMessage);
             chatHistory.push({role: 'user', content: userMessage});
 
-            // Obtener JWT del sessionStorage
             const token = sessionStorage.getItem('jwt_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            // Headers con JWT opcional
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
+            // Deshabilitar input mientras responde
+            const input = document.getElementById('chatInput');
+            const btn = document.querySelector('#chatForm button');
+            input.disabled = true;
+            btn.disabled = true;
+
+            showTypingIndicator();
 
             try {
-                // Llamada al endpoint con SSE
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify({messages: chatHistory})
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Error ${response.status}`);
 
-                // Crear mensaje del asistente vacío
+                removeTypingIndicator();
                 const assistantDiv = appendMessage('assistant', '');
                 let assistantMessage = '';
 
-                // Leer stream
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
 
@@ -1100,34 +1528,32 @@
                     if (done) break;
 
                     const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
+                    for (const line of chunk.split('\n')) {
                         if (line.startsWith('data: ')) {
                             const data = line.slice(6);
                             if (data === '[DONE]') continue;
-
                             try {
                                 const parsed = JSON.parse(data);
                                 if (parsed.content) {
                                     assistantMessage += parsed.content;
                                     assistantDiv.textContent = assistantMessage;
-                                    // Auto-scroll
                                     assistantDiv.scrollIntoView({behavior: 'smooth', block: 'end'});
                                 }
-                            } catch (e) {
-                                // Ignorar líneas mal formadas
-                            }
+                            } catch (e) {}
                         }
                     }
                 }
 
-                // Guardar en historial
                 chatHistory.push({role: 'assistant', content: assistantMessage});
 
             } catch (error) {
+                removeTypingIndicator();
                 console.error('Error en chat:', error);
                 appendMessage('assistant', 'Lo siento, hubo un error al procesar tu mensaje. Intentá de nuevo.');
+            } finally {
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus();
             }
         }
 
@@ -1173,7 +1599,12 @@
                 case 'licitaciones':
                     loadLicitaciones();
                     break;
-                // chat, ofertas, normativa, notificaciones son estáticas por ahora
+                case 'chat':
+                    initChat();
+                    break;
+                case 'notificaciones':
+                    loadNotificaciones();
+                    break;
             }
         }
 
@@ -1199,9 +1630,12 @@
         // ══════════════════════════════════════════════════════════════
         // INIT
         // ══════════════════════════════════════════════════════════════
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             // Verificar autenticación
             checkAuth();
+
+            // Cargar perfil completo desde el backend antes de renderizar
+            await loadPerfilProveedor();
 
             // Navegar a la screen inicial
             const initialHash = window.location.hash.substring(1) || 'dashboard';
@@ -1218,10 +1652,12 @@
                 }
             });
 
-            // Quick actions
-            document.querySelectorAll('.chat-quick-actions .chip').forEach(chip => {
+            // Chips del chat — usan data-msg si está disponible
+            document.querySelectorAll('#chatChips .chip').forEach(chip => {
                 chip.addEventListener('click', () => {
-                    sendMessage(chip.textContent);
+                    const msg = chip.dataset.msg || chip.textContent;
+                    if (window.location.hash !== '#chat') window.location.hash = 'chat';
+                    sendMessage(msg);
                 });
             });
         });
